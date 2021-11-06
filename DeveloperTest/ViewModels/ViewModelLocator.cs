@@ -13,6 +13,7 @@
 */
 
 using CommonServiceLocator;
+using DeveloperTest.ViewModels.Popups;
 using GalaSoft.MvvmLight.Messaging;
 
 namespace DeveloperTest.ViewModels
@@ -46,7 +47,7 @@ namespace DeveloperTest.ViewModels
         }
 
         public ServerConnectionPropertiesViewModel ServerConnectionProperties => ServiceLocator.Current.GetInstance<ServerConnectionPropertiesViewModel>();
-
+        public ErrorPopupViewModel ErrorPopup => ServiceLocator.Current.GetInstance<ErrorPopupViewModel>();
         public static void Cleanup()
         {
             // TODO Clear the ViewModels

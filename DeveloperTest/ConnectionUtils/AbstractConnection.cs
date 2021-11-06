@@ -1,41 +1,33 @@
 using System;
+using System.Threading.Tasks;
 using CommonServiceLocator;
 using Ninject.Extensions.Logging;
 
 namespace DeveloperTest.ConnectionUtils
 {
-    public abstract class AbstractConnection : AbstractTimedOutConnection
+    public abstract class AbstractConnection : IDisposable
     {
-        private bool _connected;
-        private const int ConnectTimeout = 60; //60s
         protected ILogger Logger { get; set; }
         public int ConnectionId { get; set; }
         public ConnectionDescriptor ConnectionDescriptor { get; set; }
-        public bool IsAvailable { get; set; }
+        public bool IsAlive { get; set; }
 
         public AbstractConnection(int connectionId, ConnectionDescriptor connectionDescriptor)
         {
-            Logger = ServiceLocator.Current.GetInstance<ILogger>();
-            this.SetTimeout(TimeSpan.FromSeconds(ConnectTimeout));
+            var loggerFactory = ServiceLocator.Current.GetInstance<ILoggerFactory>();
+            Logger = loggerFactory.GetCurrentClassLogger();
+
             ConnectionId = connectionId;
             ConnectionDescriptor = connectionDescriptor;
         }
 
-        public virtual bool IsConnected
-        {
-            get { return _connected; }
-            set { _connected = value; }
-        }
-
-        public abstract void Connect();
+        public abstract Task<bool> ConnectAsync();
 
         public abstract void Disconnect();
 
-        public override void Dispose()
+        public void Dispose()
         {
-            IsConnected = false;
             Disconnect();
         }
-
     }
 }

@@ -1,10 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
-using System.Configuration;
-using System.Windows.Input;
+using System.Threading.Tasks;
+using CommonServiceLocator;
 using DeveloperTest.ConnectionUtils;
 using GalaSoft.MvvmLight.CommandWpf;
 using Ninject.Extensions.Logging;
+using MvvmDialogs;
+using DeveloperTest.Utils.Extensions;
+using DeveloperTest.Utils.WPF;
+using DeveloperTest.ViewModels.Popups;
 
 namespace DeveloperTest.ViewModels
 {
@@ -19,10 +24,23 @@ namespace DeveloperTest.ViewModels
         private string _username;
         private string _password;
         private RelayCommand _startCommand;
+        private readonly IDialogService _dialogService;
+        private bool _isProcessing;
 
         #endregion
 
         #region Properties
+        public List<string> ProtocolsLst { get; set; }
+        public List<string> EncryptionTypesLst { get; set; }
+
+        public bool IsProcessing
+        {
+            get => _isProcessing;
+            set
+            {
+                Set(() => IsProcessing, ref _isProcessing, value);
+            }
+        }
 
         public string SelectedProtocol
         {
@@ -30,6 +48,8 @@ namespace DeveloperTest.ViewModels
             set
             {
                 Set(() => SelectedProtocol, ref _selectedProtocol, value);
+
+                Port = ConnectionPortUtils.GetDefaultPortForProtocol((Protocols)Enum.Parse(typeof(Protocols), value));
             }
         }
 
@@ -87,12 +107,15 @@ namespace DeveloperTest.ViewModels
         {
             get
             {
-                return _startCommand ?? (_startCommand = new RelayCommand(() =>
+                return _startCommand ?? (_startCommand = new RelayCommand(async () =>
                 {
+                    IsProcessing = true;
+                    RaisePropertyChanged(()=>IsProcessing);
+
                     var cd = new ConnectionDescriptor
                     {
                         EncryptionType = (EncryptionTypes) Enum.Parse(typeof(EncryptionTypes), _selectedEncryptionType),
-                        EncryptionProtocol = (Protocols)Enum.Parse(typeof(Protocols), _selectedProtocol),
+                        MailProtocol = (Protocols)Enum.Parse(typeof(Protocols), _selectedProtocol),
                         Port = Convert.ToInt32(Port),
                         Server = ServerName,
                         Username = Username,
@@ -100,7 +123,7 @@ namespace DeveloperTest.ViewModels
                     };
 
                     RetrieveEmailPartsProcess process = null;
-                    switch (cd.EncryptionProtocol)
+                    switch (cd.MailProtocol)
                     {
                         case Protocols.IMAP:
                             process = new RetrieveEmailPartsProcess(5, cd);
@@ -109,7 +132,18 @@ namespace DeveloperTest.ViewModels
                             process = new RetrieveEmailPartsProcess(1, cd);
                             break;
                     }
-                    process?.Start();
+                    var resultConnectToHost=await process?.ConnectToHost();
+                    if (!resultConnectToHost)
+                    {
+                        var activationVm = new ErrorPopupViewModel(Logger)
+                        {
+                            Message = $"Could not connect to host {cd.Server}:{cd.Port}"
+                        };
+                        await _dialogService.ShowDialogAsync(this, activationVm);
+                    }
+
+                    IsProcessing = false;
+                    RaisePropertyChanged(() => IsProcessing);
                 }, CanStartRetrieveEmails));
             }
         }
@@ -119,7 +153,8 @@ namespace DeveloperTest.ViewModels
             return !string.IsNullOrEmpty(_serverName) &&
                    !string.IsNullOrEmpty(_username) &&
                    !string.IsNullOrEmpty(_password) &&
-                   string.IsNullOrEmpty(Error);
+                   string.IsNullOrEmpty(Error) &&
+                   !IsProcessing;
         }
 
         #endregion
@@ -128,7 +163,31 @@ namespace DeveloperTest.ViewModels
 
         public ServerConnectionPropertiesViewModel(ILogger logger) : base(logger)
         {
-            Port = "913";
+            _dialogService = ServiceLocator.Current.GetInstance<IDialogService>();
+        }
+
+        #endregion
+
+        #region overrides
+
+        protected override Task ExecuteOnLoad()
+        {
+            ProtocolsLst = new List<string>();
+            EncryptionTypesLst = new List<string>();
+
+            foreach (var protocol in Enum.GetValues(typeof(Protocols)))
+            {
+                ProtocolsLst.Add(protocol.ToString());
+            }
+            foreach (var encryptionType in Enum.GetValues(typeof(EncryptionTypes)))
+            {
+                EncryptionTypesLst.Add(encryptionType.ToString());
+            }
+
+            RaisePropertyChanged(() => ProtocolsLst);
+            RaisePropertyChanged(() => EncryptionTypesLst);
+
+            return base.ExecuteOnLoad();
         }
 
         #endregion
@@ -142,6 +201,7 @@ namespace DeveloperTest.ViewModels
                 switch (columnName)
                 {
                     case nameof(Port):
+                        if (_port == null) break;
                         if (!int.TryParse(_port, out int port))
                             Error = "Port is not a valid number!";
                         break;

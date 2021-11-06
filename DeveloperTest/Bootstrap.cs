@@ -1,8 +1,12 @@
-﻿using DeveloperTest.ViewModels;
+﻿using DeveloperTest.Utils.WPF.Components.Popups;
+using DeveloperTest.ViewModels;
+using DeveloperTest.ViewModels.Popups;
 using DeveloperTest.Views;
+using DeveloperTest.Views.Popups;
 using Ninject;
 using Ninject.Extensions.Logging.Log4net;
 using Ninject.Planning.Bindings.Resolvers;
+using MvvmDialogs;
 
 namespace DeveloperTest
 {
@@ -20,9 +24,12 @@ namespace DeveloperTest
             Kernel = new StandardKernel(settings);
             Kernel.Components.Remove<IMissingBindingResolver, SelfBindingResolver>();
 
-           Kernel.Load<Log4NetModule>();
-           Kernel.Bind<ServerConnectionPropertiesViewModel>().ToSelf().InTransientScope();
-           Kernel.Bind<ServerConnectionPropertiesView>().ToSelf().InSingletonScope();
+            Kernel.Bind<IDialogService>().ToMethod(context => new DialogService(null, new DialogTypeLocator()));
+            Kernel.Load<Log4NetModule>();
+            Kernel.Bind<ServerConnectionPropertiesViewModel>().ToSelf().InTransientScope();
+            Kernel.Bind<ServerConnectionPropertiesView>().ToSelf().InSingletonScope();
+            Kernel.Bind<ErrorPopupViewModel>().ToSelf().InTransientScope();
+            Kernel.Bind<ErrorPopupView>().ToSelf().InTransientScope();
         }
     }
 }

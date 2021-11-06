@@ -1,4 +1,6 @@
-﻿namespace DeveloperTest.ConnectionUtils
+﻿using System.Threading.Tasks;
+
+namespace DeveloperTest.ConnectionUtils
 {
     public class Pop3Connection : AbstractConnection
     {
@@ -8,16 +10,16 @@
 
         }
 
-        public override void Connect()
+        public override async Task<bool> ConnectAsync()
         {
-            IsConnected = true;
-            IsAvailable = IsAlive();
+            Logger.Info($"Connection #{ConnectionId} Try connecting to Pop3 mail server {ConnectionDescriptor.Server}:{ConnectionDescriptor.Port} :");
+            return IsAlive = true;
         }
 
         public override void Disconnect()
         {
-            IsConnected = false;
-            IsAvailable = IsAlive();
+            Logger.Info($"Connection #{ConnectionId} Try disconnecting from Pop3 mail server");
+            IsAlive = false;
         }
     }
 }

@@ -3,10 +3,13 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:developerTest="clr-namespace:DeveloperTest"
+             xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
+             xmlns:command="http://www.galasoft.ch/mvvmlight"
+             xmlns:md="https://github.com/fantasticfiasco/mvvm-dialogs"
              mc:Ignorable="d" 
              d:DesignHeight="200" d:DesignWidth="800"
-             DataContext="{Binding ServerConnectionProperties, Source={StaticResource VMLocator}}">
+             DataContext="{Binding ServerConnectionProperties, Source={StaticResource VMLocator}}"
+             md:DialogServiceViews.IsRegistered="True" >
 
     <UserControl.Resources>
             <ControlTemplate x:Key="ErrorTemplate">
@@ -26,6 +29,12 @@
                 </Style.Triggers>
             </Style>
     </UserControl.Resources>
+
+    <i:Interaction.Triggers>
+        <i:EventTrigger EventName="Loaded">
+            <command:EventToCommand Command="{Binding OnLoadCommand}"/>
+        </i:EventTrigger>
+    </i:Interaction.Triggers>
 
     <Grid>
         <Grid.ColumnDefinitions>
@@ -51,9 +60,8 @@
             <Label Grid.Row="2" Grid.Column="0" VerticalAlignment="Center"  HorizontalAlignment="Left"
                    Content="Port"/>
             <ComboBox Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center"
+                      ItemsSource="{Binding ProtocolsLst}"
                       SelectedItem="{Binding SelectedProtocol}" SelectedIndex="0">
-                <ComboBoxItem Content="{x:Static developerTest:Protocols.IMAP}"/>
-                <ComboBoxItem Content="{x:Static developerTest:Protocols.POP3}"/>
             </ComboBox>
             <TextBox Text="{Binding ServerName, UpdateSourceTrigger=PropertyChanged}"
                      Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
@@ -80,11 +88,9 @@
                    Content="Username"/>
             <Label Grid.Row="2" Grid.Column="0" VerticalAlignment="Center"  HorizontalAlignment="Left"
                    Content="Password"/>
-            <ComboBox SelectedItem="{Binding SelectedEncryptionType}" 
+            <ComboBox SelectedItem="{Binding SelectedEncryptionType}"
+                      ItemsSource="{Binding EncryptionTypesLst}"
                       Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" SelectedIndex="0">
-                <ComboBoxItem Content="{x:Static developerTest:EncryptionTypes.SSLTLS}"/>
-                <ComboBoxItem Content="{x:Static developerTest:EncryptionTypes.STARTTLS}"/>
-                <ComboBoxItem Content="{x:Static developerTest:EncryptionTypes.Unencrypted}"/>
             </ComboBox>
             <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
                      Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" />

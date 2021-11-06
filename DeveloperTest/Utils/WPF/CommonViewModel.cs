@@ -1,11 +1,10 @@
 ﻿using System.Threading.Tasks;
-using System.Windows;
 using System.Windows.Input;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
 using Ninject.Extensions.Logging;
 
-namespace DeveloperTest
+namespace DeveloperTest.Utils.WPF
 {
     public abstract class CommonViewModel : ViewModelBase
     {
