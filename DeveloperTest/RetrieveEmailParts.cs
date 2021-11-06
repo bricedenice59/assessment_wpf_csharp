@@ -55,9 +55,22 @@ namespace DeveloperTest
             return success;
         }
 
-        public async Task<bool> DoAuthenticate()
+        public async Task DoAuthenticate()
         {
-            return true;
+            foreach (var acnx in _connections)
+            {
+                try
+                {
+                    await acnx.AuthentificateAsync();
+                }
+                catch (Limilabs.Client.ServerException serverException)
+                {
+                    _logger.ErrorException("Authentication failed!", serverException);
+
+                    //There is no reason to continue trying authenticate for other connections as they will all end in failure
+                    throw;
+                }
+            }
         }
 
         public void Stop()

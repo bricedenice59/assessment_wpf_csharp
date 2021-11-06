@@ -23,6 +23,8 @@ namespace DeveloperTest.ConnectionUtils
 
         public abstract Task<bool> ConnectAsync();
 
+        public abstract Task AuthentificateAsync();
+
         public abstract void Disconnect();
 
         public void Dispose()

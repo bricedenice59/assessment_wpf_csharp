@@ -6,6 +6,7 @@
              xmlns:i="http://schemas.microsoft.com/expression/2010/interactivity"
              xmlns:command="http://www.galasoft.ch/mvvmlight"
              xmlns:md="https://github.com/fantasticfiasco/mvvm-dialogs"
+             xmlns:components="clr-namespace:DeveloperTest.Utils.WPF.Components"
              mc:Ignorable="d" 
              d:DesignHeight="200" d:DesignWidth="800"
              DataContext="{Binding ServerConnectionProperties, Source={StaticResource VMLocator}}"
@@ -51,6 +52,7 @@
                 <RowDefinition Height="40"/>
                 <RowDefinition Height="40"/>
                 <RowDefinition Height="40"/>
+                <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
             <Label Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left"
@@ -68,6 +70,11 @@
             <TextBox Text="{Binding Port, UpdateSourceTrigger=PropertyChanged, ValidatesOnDataErrors=True, ValidatesOnExceptions=True}"
                      Validation.ErrorTemplate="{StaticResource ErrorTemplate}"
                      Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+
+            <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="{Binding IsProcessing, Converter={StaticResource Bool2VisibilityConverter}}">
+                <components:DoubleCircularProgressBar Width="30" Height="30" StrokeColor="Blue"/>
+                <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Text="{Binding MessageCurrentOperation}"></TextBlock>
+            </StackPanel>
         </Grid>
 
         <Grid Grid.Column="1">

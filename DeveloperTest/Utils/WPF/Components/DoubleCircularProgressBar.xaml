@@ -1,0 +1,42 @@
+﻿<UserControl x:Class="DeveloperTest.Utils.WPF.Components.DoubleCircularProgressBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             mc:Ignorable="d"
+             x:Name="ControlRoot">
+    <Grid HorizontalAlignment="Left" VerticalAlignment="Top">
+        <Viewbox Stretch="Uniform" >
+            <Canvas Height="200" Width="200">
+                <Ellipse Canvas.Left="0" Canvas.Top="0" Width="200" Height="200" Stroke="{Binding ElementName=ControlRoot, Path=StrokeColor}" StrokeThickness="20" Fill="Transparent" Clip="M100,100 L100,0 200,0 200,200 0,200 0,100 z">
+                    <Ellipse.RenderTransform>
+                        <RotateTransform CenterX="100" CenterY="100"/>
+                    </Ellipse.RenderTransform>
+                    <Ellipse.Triggers>
+                        <EventTrigger RoutedEvent="UserControl.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(RotateTransform.Angle)" From="0" To="360" Duration="0:0:1" RepeatBehavior="Forever"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Ellipse.Triggers>
+                </Ellipse>
+                <Ellipse Canvas.Left="25" Canvas.Top="25" Width="150" Height="150" Stroke="{Binding ElementName=ControlRoot, Path=StrokeColor}" StrokeThickness="20" Fill="Transparent" Clip="M75,75 L0,75 0,0 175,0 175,175 75,175 z">
+                    <Ellipse.RenderTransform>
+                        <RotateTransform CenterX="75" CenterY="75"/>
+                    </Ellipse.RenderTransform>
+                    <Ellipse.Triggers>
+                        <EventTrigger RoutedEvent="UserControl.Loaded">
+                            <BeginStoryboard>
+                                <Storyboard>
+                                    <DoubleAnimation Storyboard.TargetProperty="RenderTransform.(RotateTransform.Angle)" From="0" To="-360" Duration="0:0:1" RepeatBehavior="Forever"/>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger>
+                    </Ellipse.Triggers>
+                </Ellipse>
+            </Canvas>
+        </Viewbox>
+    </Grid>
+</UserControl>

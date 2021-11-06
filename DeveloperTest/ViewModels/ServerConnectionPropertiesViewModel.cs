@@ -26,6 +26,7 @@ namespace DeveloperTest.ViewModels
         private RelayCommand _startCommand;
         private readonly IDialogService _dialogService;
         private bool _isProcessing;
+        private string _messageCurrentOperation;
 
         #endregion
 
@@ -48,8 +49,8 @@ namespace DeveloperTest.ViewModels
             set
             {
                 Set(() => SelectedProtocol, ref _selectedProtocol, value);
-
-                Port = ConnectionPortUtils.GetDefaultPortForProtocol((Protocols)Enum.Parse(typeof(Protocols), value));
+                if(_selectedEncryptionType != null)
+                    Port = ConnectionPortUtils.GetDefaultPortForProtocol((Protocols)Enum.Parse(typeof(Protocols), value), (EncryptionTypes)Enum.Parse(typeof(EncryptionTypes), _selectedEncryptionType));
             }
         }
 
@@ -59,6 +60,8 @@ namespace DeveloperTest.ViewModels
             set
             {
                 Set(() => SelectedEncryptionType, ref _selectedEncryptionType, value);
+                if(_selectedProtocol != null)
+                    Port = ConnectionPortUtils.GetDefaultPortForProtocol((Protocols)Enum.Parse(typeof(Protocols), _selectedProtocol), (EncryptionTypes)Enum.Parse(typeof(EncryptionTypes), value));
             }
         }
 
@@ -103,6 +106,15 @@ namespace DeveloperTest.ViewModels
             }
         }
 
+        public string MessageCurrentOperation
+        {
+            get => _messageCurrentOperation;
+            set
+            {
+                Set(() => MessageCurrentOperation, ref _messageCurrentOperation, value);
+            }
+        }
+
         public RelayCommand StartCommand
         {
             get
@@ -132,14 +144,45 @@ namespace DeveloperTest.ViewModels
                             process = new RetrieveEmailPartsProcess(1, cd);
                             break;
                     }
+
+                    MessageCurrentOperation = "Connecting...";
+
                     var resultConnectToHost=await process?.ConnectToHost();
                     if (!resultConnectToHost)
                     {
-                        var activationVm = new ErrorPopupViewModel(Logger)
+                        var errorPopupViewModelConn = new ErrorPopupViewModel(Logger)
                         {
                             Message = $"Could not connect to host {cd.Server}:{cd.Port}"
                         };
-                        await _dialogService.ShowDialogAsync(this, activationVm);
+                        
+                        await _dialogService.ShowDialogAsync(this, errorPopupViewModelConn);
+                    }
+                    else
+                    {
+                        MessageCurrentOperation = "Authenticating...";
+
+                        bool authenticationFailed = false;
+                        string errorMessage = null;
+                        try
+                        {
+                            await process?.DoAuthenticate();
+                        }
+                        catch (Exception e)
+                        {
+                            authenticationFailed = true;
+                            errorMessage = e.Message;
+                        }
+                        finally
+                        {
+                            if (authenticationFailed)
+                            {
+                                var errorPopupViewModelAuth = new ErrorPopupViewModel(Logger) {
+                                    Message = errorMessage
+                                };
+
+                                await _dialogService.ShowDialogAsync(this, errorPopupViewModelAuth);
+                            }
+                        }
                     }
 
                     IsProcessing = false;

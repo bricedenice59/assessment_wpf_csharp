@@ -9,6 +9,7 @@
                   mc:Ignorable="d">
     <developerTest:BasicApplication.Resources>
         <ResourceDictionary>
+            <BooleanToVisibilityConverter x:Key="Bool2VisibilityConverter"/>
             <viewModels:ViewModelLocator x:Key="VMLocator" d:IsDataSource="True" />
         </ResourceDictionary>
     </developerTest:BasicApplication.Resources>

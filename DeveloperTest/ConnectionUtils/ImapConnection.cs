@@ -35,7 +35,23 @@ namespace DeveloperTest.ConnectionUtils
                     break;
             }
 
+            if(_imapConnectionObj.Connected)
+                Logger.Info(_imapConnectionObj.ServerGreeting.Message);
+
             return IsAlive = _imapConnectionObj.Connected;
+        }
+
+        public override async Task AuthentificateAsync()
+        {
+            if (!IsAlive)
+            {
+                Logger.Info("Cannot authenticate as connection to Imap mail server is down");
+                return;
+            }
+            Logger.Info($"Connection #{ConnectionId} Try authenticating with username and password for Imap mail server");
+
+            await _imapConnectionObj.UseBestLoginAsync(ConnectionDescriptor.Username, ConnectionDescriptor.Password);
+            Logger.Info($"Connection #{ConnectionId} Authentication OK");
         }
 
         public override void Disconnect()

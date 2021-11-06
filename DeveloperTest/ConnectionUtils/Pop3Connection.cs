@@ -16,6 +16,11 @@ namespace DeveloperTest.ConnectionUtils
             return IsAlive = true;
         }
 
+        public override Task AuthentificateAsync()
+        {
+            return Task.FromResult(0);
+        }
+
         public override void Disconnect()
         {
             Logger.Info($"Connection #{ConnectionId} Try disconnecting from Pop3 mail server");
