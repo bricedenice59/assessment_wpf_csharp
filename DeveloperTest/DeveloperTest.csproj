@@ -64,6 +64,13 @@
     <Compile Include="Bootstrap.cs" />
     <Compile Include="Class1.cs" />
     <Compile Include="CommonViewModel.cs" />
+    <Compile Include="ConnectionUtils\AbstractConnection.cs" />
+    <Compile Include="ConnectionUtils\AbstractConnectionResource.cs" />
+    <Compile Include="ConnectionUtils\AbstractTimedOutConnection.cs" />
+    <Compile Include="ConnectionUtils\ConnectionDescriptor.cs" />
+    <Compile Include="ConnectionUtils\ImapConnection.cs" />
+    <Compile Include="ConnectionUtils\Pop3Connection.cs" />
+    <Compile Include="RetrieveEmailParts.cs" />
     <Compile Include="Utils\NinjectServiceLocator.cs" />
     <Compile Include="ViewModels\ServerConnectionPropertiesViewModel.cs" />
     <Compile Include="ViewModels\ViewModelLocator.cs" />

@@ -2,6 +2,7 @@
 using System.ComponentModel;
 using System.Configuration;
 using System.Windows.Input;
+using DeveloperTest.ConnectionUtils;
 using GalaSoft.MvvmLight.CommandWpf;
 using Ninject.Extensions.Logging;
 
@@ -88,8 +89,28 @@ namespace DeveloperTest.ViewModels
             {
                 return _startCommand ?? (_startCommand = new RelayCommand(() =>
                 {
+                    var cd = new ConnectionDescriptor
+                    {
+                        EncryptionType = (EncryptionTypes) Enum.Parse(typeof(EncryptionTypes), _selectedEncryptionType),
+                        EncryptionProtocol = (Protocols)Enum.Parse(typeof(Protocols), _selectedProtocol),
+                        Port = Convert.ToInt32(Port),
+                        Server = ServerName,
+                        Username = Username,
+                        Password = Password
+                    };
 
-                },CanStartRetrieveEmails));
+                    RetrieveEmailPartsProcess process = null;
+                    switch (cd.EncryptionProtocol)
+                    {
+                        case Protocols.IMAP:
+                            process = new RetrieveEmailPartsProcess(5, cd);
+                            break;
+                        case Protocols.POP3:
+                            process = new RetrieveEmailPartsProcess(1, cd);
+                            break;
+                    }
+                    process?.Start();
+                }, CanStartRetrieveEmails));
             }
         }
 
