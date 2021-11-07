@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading.Tasks;
 using CommonServiceLocator;
-using DeveloperTest.ConnectionUtils;
+using DeveloperTest.ConnectionService;
+using DeveloperTest.EmailService;
 using GalaSoft.MvvmLight.CommandWpf;
 using Ninject.Extensions.Logging;
 using MvvmDialogs;
@@ -134,56 +135,101 @@ namespace DeveloperTest.ViewModels
                         Password = Password
                     };
 
-                    RetrieveEmailPartsProcess process = null;
+                    EmailConnectService process = null;
                     switch (cd.MailProtocol)
                     {
                         case Protocols.IMAP:
-                            process = new RetrieveEmailPartsProcess(5, cd);
+                            process = new EmailConnectService(5, cd);
                             break;
                         case Protocols.POP3:
-                            process = new RetrieveEmailPartsProcess(1, cd);
+                            process = new EmailConnectService(1, cd);
                             break;
                     }
+
+                    if (process == null)
+                        throw new NotImplementedException();
+
+                    #region Connection stage
 
                     MessageCurrentOperation = "Connecting...";
 
-                    var resultConnectToHost=await process?.ConnectToHost();
-                    if (!resultConnectToHost)
+                    bool connectionFailed = false;
+                    string errorConnectionMessage = null;
+                    try
                     {
-                        var errorPopupViewModelConn = new ErrorPopupViewModel(Logger)
-                        {
-                            Message = $"Could not connect to host {cd.Server}:{cd.Port}"
-                        };
-                        
-                        await _dialogService.ShowDialogAsync(this, errorPopupViewModelConn);
+                        await process.ConnectToHost();
                     }
-                    else
+                    catch (Exception e)
                     {
-                        MessageCurrentOperation = "Authenticating...";
-
-                        bool authenticationFailed = false;
-                        string errorMessage = null;
-                        try
+                        connectionFailed = true;
+                        errorConnectionMessage = e.Message;
+                    }
+                    finally
+                    {
+                        if (connectionFailed)
                         {
-                            await process?.DoAuthenticate();
-                        }
-                        catch (Exception e)
-                        {
-                            authenticationFailed = true;
-                            errorMessage = e.Message;
-                        }
-                        finally
-                        {
-                            if (authenticationFailed)
+                            var errorPopupViewModelConn = new ErrorPopupViewModel(Logger)
                             {
-                                var errorPopupViewModelAuth = new ErrorPopupViewModel(Logger) {
-                                    Message = errorMessage
-                                };
+                                Message = $"Could not connect to host {cd.Server}:{cd.Port}" + "\r\n" + errorConnectionMessage
+                            };
 
-                                await _dialogService.ShowDialogAsync(this, errorPopupViewModelAuth);
-                            }
+                            await _dialogService.ShowDialogAsync(this, errorPopupViewModelConn);
                         }
                     }
+
+                    if (connectionFailed)
+                    {
+                        IsProcessing = false;
+                        RaisePropertyChanged(() => IsProcessing);
+                        return;
+                    }
+
+                    #endregion
+
+                    #region Authentication stage
+
+                    MessageCurrentOperation = "Authenticating...";
+
+                    bool authenticationFailed = false;
+                    string errorMessage = null;
+                    try
+                    {
+                        await process.DoAuthenticate();
+                    }
+                    catch (Exception e)
+                    {
+                        authenticationFailed = true;
+                        errorMessage = e.Message;
+                    }
+                    finally
+                    {
+                        if (authenticationFailed)
+                        {
+                            var errorPopupViewModelAuth = new ErrorPopupViewModel(Logger) {
+                                Message = errorMessage
+                            };
+
+                            await _dialogService.ShowDialogAsync(this, errorPopupViewModelAuth);
+                        }
+                    }
+
+                    if (authenticationFailed)
+                    {
+                        IsProcessing = false;
+                        RaisePropertyChanged(() => IsProcessing);
+                        return;
+                    }
+
+                    #endregion
+
+                    #region Download process
+
+                    MessageCurrentOperation = "Downloading emails...";
+
+                    EmailDownloadService eds = new EmailDownloadService();
+                    await eds.DownloadHeaders();
+
+                    #endregion
 
                     IsProcessing = false;
                     RaisePropertyChanged(() => IsProcessing);

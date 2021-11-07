@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace DeveloperTest.ConnectionUtils
+namespace DeveloperTest.ConnectionService
 {
     public class Pop3Connection : AbstractConnection
     {
@@ -10,13 +10,13 @@ namespace DeveloperTest.ConnectionUtils
 
         }
 
-        public override async Task<bool> ConnectAsync()
+        public override async Task ConnectAsync()
         {
             Logger.Info($"Connection #{ConnectionId} Try connecting to Pop3 mail server {ConnectionDescriptor.Server}:{ConnectionDescriptor.Port} :");
-            return IsAlive = true;
+            IsAlive = true;
         }
 
-        public override Task AuthentificateAsync()
+        public override Task AuthenticateAsync()
         {
             return Task.FromResult(0);
         }

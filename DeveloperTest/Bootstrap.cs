@@ -1,4 +1,5 @@
-﻿using DeveloperTest.Utils.WPF.Components.Popups;
+﻿using DeveloperTest.EmailService;
+using DeveloperTest.Utils.WPF.Components.Popups;
 using DeveloperTest.ViewModels;
 using DeveloperTest.ViewModels.Popups;
 using DeveloperTest.Views;
@@ -30,6 +31,7 @@ namespace DeveloperTest
             Kernel.Bind<ServerConnectionPropertiesView>().ToSelf().InSingletonScope();
             Kernel.Bind<ErrorPopupViewModel>().ToSelf().InTransientScope();
             Kernel.Bind<ErrorPopupView>().ToSelf().InTransientScope();
+            Kernel.Bind<IEmailServiceSharedContext>().To<EmailServiceSharedContext>().InSingletonScope();
         }
     }
 }

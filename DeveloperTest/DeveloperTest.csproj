@@ -62,14 +62,17 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Bootstrap.cs" />
-    <Compile Include="ConnectionUtils\ConnectionPortUtils.cs" />
+    <Compile Include="ConnectionService\ConnectionPortUtils.cs" />
+    <Compile Include="EmailService\EmailDownloadService.cs" />
+    <Compile Include="EmailService\EmailServiceSharedContext.cs" />
+    <Compile Include="EmailService\IEmailServiceSharedContext.cs" />
     <Compile Include="Utils\WPF\CommonDialogViewModel.cs" />
     <Compile Include="Utils\WPF\CommonViewModel.cs" />
-    <Compile Include="ConnectionUtils\AbstractConnection.cs" />
-    <Compile Include="ConnectionUtils\ConnectionDescriptor.cs" />
-    <Compile Include="ConnectionUtils\ImapConnection.cs" />
-    <Compile Include="ConnectionUtils\Pop3Connection.cs" />
-    <Compile Include="RetrieveEmailParts.cs" />
+    <Compile Include="ConnectionService\AbstractConnection.cs" />
+    <Compile Include="ConnectionService\ConnectionDescriptor.cs" />
+    <Compile Include="ConnectionService\ImapConnection.cs" />
+    <Compile Include="ConnectionService\Pop3Connection.cs" />
+    <Compile Include="EmailService\EmailConnectService.cs" />
     <Compile Include="Utils\Extensions\DialogServiceExtensions.cs" />
     <Compile Include="Utils\NinjectServiceLocator.cs" />
     <Compile Include="Utils\WPF\Components\DoubleCircularProgressBar.xaml.cs">
@@ -139,9 +142,7 @@
     </None>
     <AppDesigner Include="Properties\" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Views\Popups\Base\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <PackageReference Include="CommonServiceLocator">
       <Version>2.0.6</Version>

@@ -1,4 +1,4 @@
-﻿namespace DeveloperTest.ConnectionUtils
+﻿namespace DeveloperTest.ConnectionService
 {
     public class ConnectionDescriptor
     {

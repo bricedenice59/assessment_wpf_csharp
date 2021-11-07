@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using CommonServiceLocator;
 using Ninject.Extensions.Logging;
 
-namespace DeveloperTest.ConnectionUtils
+namespace DeveloperTest.ConnectionService
 {
     public abstract class AbstractConnection : IDisposable
     {
@@ -21,9 +21,9 @@ namespace DeveloperTest.ConnectionUtils
             ConnectionDescriptor = connectionDescriptor;
         }
 
-        public abstract Task<bool> ConnectAsync();
+        public abstract Task ConnectAsync();
 
-        public abstract Task AuthentificateAsync();
+        public abstract Task AuthenticateAsync();
 
         public abstract void Disconnect();
 

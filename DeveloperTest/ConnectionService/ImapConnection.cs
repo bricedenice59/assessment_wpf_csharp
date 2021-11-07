@@ -1,26 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Limilabs.Client.IMAP;
-using Limilabs.Mail;
 
-namespace DeveloperTest.ConnectionUtils
+namespace DeveloperTest.ConnectionService
 {
     public class ImapConnection : AbstractConnection
     {
-        private Imap _imapConnectionObj;
+        public Imap ImapConnectionObj => _imapConnectionObj;
+
+        private readonly Imap _imapConnectionObj;
 
         public ImapConnection(int connectionId, ConnectionDescriptor connectionDescriptor) : 
             base(connectionId, connectionDescriptor)
         {
-
+            _imapConnectionObj = new Imap();
         }
 
-        public override async Task<bool> ConnectAsync()
+        /// <summary>
+        /// Initiate connection to Email server 
+        /// </summary>
+        /// <returns></returns>
+        public override async Task ConnectAsync()
         {
             Logger.Info($"Connection #{ConnectionId} Try connecting to Imap mail server {ConnectionDescriptor.Server}:{ConnectionDescriptor.Port} :");
 
-            _imapConnectionObj = new Imap();
             switch (ConnectionDescriptor.EncryptionType)
             {
                 case EncryptionTypes.SSLTLS:
@@ -38,10 +40,14 @@ namespace DeveloperTest.ConnectionUtils
             if(_imapConnectionObj.Connected)
                 Logger.Info(_imapConnectionObj.ServerGreeting.Message);
 
-            return IsAlive = _imapConnectionObj.Connected;
+            IsAlive = _imapConnectionObj.Connected;
         }
 
-        public override async Task AuthentificateAsync()
+        /// <summary>
+        /// Authenticate with email server with provided credentials  
+        /// </summary>
+        /// <returns></returns>
+        public override async Task AuthenticateAsync()
         {
             if (!IsAlive)
             {
