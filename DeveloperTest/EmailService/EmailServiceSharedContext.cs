@@ -1,25 +1,37 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using DeveloperTest.ConnectionService;
 
 namespace DeveloperTest.EmailService
 {
     public class EmailServiceSharedContext : IEmailServiceSharedContext
     {
-        private List<AbstractConnection> AvailableConnections { get; set; }
+        private List<AbstractConnection> _connections;
 
         public EmailServiceSharedContext()
         {
-
+            _connections = new List<AbstractConnection>();
         }
 
-        public void Init(int nbConnections)
+        public void Init(ConnectionDescriptor cd, int nbConnections)
         {
-            AvailableConnections = new List<AbstractConnection>(nbConnections);
+            for (int i = 0; i < nbConnections; i++)
+            {
+                if (cd.MailProtocol == Protocols.IMAP)
+                    _connections.Add(new ImapConnection(i, cd));
+                else if (cd.MailProtocol == Protocols.POP3)
+                    _connections.Add(new Pop3Connection(i, cd));
+            }
         }
 
-        public List<AbstractConnection> GetAvailableConnections()
+        public List<AbstractConnection> GetAllConnections()
         {
-            return AvailableConnections;
+            return _connections;
+        }
+
+        public IEnumerable<AbstractConnection> GetAllAvailableConnections()
+        {
+            return _connections?.Where(x=>x.IsAlive && !x.IsBusy);
         }
     }
 }

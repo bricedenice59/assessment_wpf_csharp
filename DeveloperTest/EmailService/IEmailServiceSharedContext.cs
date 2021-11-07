@@ -5,7 +5,8 @@ namespace DeveloperTest.EmailService
 {
     public interface IEmailServiceSharedContext
     {
-        void Init(int nbConnections);
-        List<AbstractConnection> GetAvailableConnections();
+        void Init(ConnectionDescriptor cd, int nbConnections);
+        List<AbstractConnection> GetAllConnections();
+        IEnumerable<AbstractConnection> GetAllAvailableConnections();
     }
 }

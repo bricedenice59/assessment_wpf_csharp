@@ -79,6 +79,7 @@
       <DependentUpon>DoubleCircularProgressBar.xaml</DependentUpon>
     </Compile>
     <Compile Include="Utils\WPF\Components\Popups\DialogTypeLocator.cs" />
+    <Compile Include="ValueObjects\EmailHeader.cs" />
     <Compile Include="ViewModels\Popups\ErrorPopupViewModel.cs" />
     <Compile Include="ViewModels\ServerConnectionPropertiesViewModel.cs" />
     <Compile Include="ViewModels\ViewModelLocator.cs" />

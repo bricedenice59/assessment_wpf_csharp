@@ -11,22 +11,20 @@ namespace DeveloperTest.EmailService
     {
         private readonly ILogger _logger;
 
-        public EmailConnectService(int maxActiveConnections, ConnectionDescriptor cd)
+        private const int MaxActiveConnectionsImap = 5;
+        private const int MaxActiveConnectionsPop3 = 1;
+
+        public EmailConnectService(ConnectionDescriptor cd)
         {
             var loggerFactory = ServiceLocator.Current.GetInstance<ILoggerFactory>();
             _logger = loggerFactory.GetCurrentClassLogger();
 
-            var sharedContext = ServiceLocator.Current.GetInstance<IEmailServiceSharedContext>();
-            sharedContext.Init(maxActiveConnections);
-            var connections = sharedContext.GetAvailableConnections();
+            if (cd == null)
+                throw new ArgumentException("ConnectionDescriptor is null!");
 
-            for (int connectionNb = 0; connectionNb < maxActiveConnections; connectionNb++)
-            {
-                AbstractConnection cxn = cd.MailProtocol == Protocols.IMAP
-                    ? new ImapConnection(connectionNb, cd)
-                    : (AbstractConnection)new Pop3Connection(connectionNb, cd);
-                connections.Add(cxn);
-            }
+            var sharedContext = ServiceLocator.Current.GetInstance<IEmailServiceSharedContext>();
+            //create the x connections
+            sharedContext.Init(cd, cd.MailProtocol == Protocols.IMAP ? MaxActiveConnectionsImap : MaxActiveConnectionsPop3);
         }
 
         /// <summary>
@@ -36,7 +34,7 @@ namespace DeveloperTest.EmailService
         public async Task ConnectToHost()
         {
             var sharedContext = ServiceLocator.Current.GetInstance<IEmailServiceSharedContext>();
-            foreach (var acnx in sharedContext.GetAvailableConnections())
+            foreach (var acnx in sharedContext.GetAllConnections())
             {
                 try
                 {
@@ -59,7 +57,7 @@ namespace DeveloperTest.EmailService
         public async Task DoAuthenticate()
         {
             var sharedContext = ServiceLocator.Current.GetInstance<IEmailServiceSharedContext>();
-            foreach (var acnx in sharedContext.GetAvailableConnections())
+            foreach (var acnx in sharedContext.GetAllConnections())
             {
                 try
                 {
@@ -81,7 +79,7 @@ namespace DeveloperTest.EmailService
         public void Stop()
         {
             var sharedContext = ServiceLocator.Current.GetInstance<IEmailServiceSharedContext>();
-            foreach (var acnx in sharedContext.GetAvailableConnections())
+            foreach (var acnx in sharedContext.GetAllConnections())
             {
                 try
                 {

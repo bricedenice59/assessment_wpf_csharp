@@ -139,10 +139,10 @@ namespace DeveloperTest.ViewModels
                     switch (cd.MailProtocol)
                     {
                         case Protocols.IMAP:
-                            process = new EmailConnectService(5, cd);
+                            process = new EmailConnectService(cd);
                             break;
                         case Protocols.POP3:
-                            process = new EmailConnectService(1, cd);
+                            process = new EmailConnectService(cd);
                             break;
                     }
 
@@ -227,7 +227,7 @@ namespace DeveloperTest.ViewModels
                     MessageCurrentOperation = "Downloading emails...";
 
                     EmailDownloadService eds = new EmailDownloadService();
-                    await eds.DownloadHeaders();
+                    await eds.DownloadEmails();
 
                     #endregion
 

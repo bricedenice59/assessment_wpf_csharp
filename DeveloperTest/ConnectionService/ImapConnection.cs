@@ -9,10 +9,12 @@ namespace DeveloperTest.ConnectionService
 
         private readonly Imap _imapConnectionObj;
 
+
         public ImapConnection(int connectionId, ConnectionDescriptor connectionDescriptor) : 
             base(connectionId, connectionDescriptor)
         {
             _imapConnectionObj = new Imap();
+            IsBusy = false;
         }
 
         /// <summary>
