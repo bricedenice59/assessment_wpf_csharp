@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using CommonServiceLocator;
+using Dasync.Collections;
 using DeveloperTest.ConnectionService;
 using Limilabs.Client.IMAP;
 using Ninject.Extensions.Logging;
@@ -60,15 +61,12 @@ namespace DeveloperTest.EmailService
                 }
             }
 
+            _logger.Info($"Get emails uids");
+            List<long> uids = new List<long>();
             //I assume at that stage that all connections are available as this is the first action that comes straight after connecting the mail server
             if (connections[0] is ImapConnection connectionImap)
             {
-                _logger.Info($"Get emails uids");
-                var uids = await connectionImap.ImapConnectionObj.SearchAsync(Flag.All);
-                await ProcessDownloadHeadersAndBodies(uids, connections);
-
-                _logger.Info($"{_nbProcessedHeaders} have been successfully downloaded");
-                _logger.Info($"{_NbProcessedBodies} have been successfully downloaded");
+                uids = await connectionImap.ImapConnectionObj.SearchAsync(Flag.All);
             }
             else if (connections[0] is Pop3Connection)
             {
@@ -78,9 +76,15 @@ namespace DeveloperTest.EmailService
             {
                 throw new NotImplementedException("Cannot download headers for this type of connection!");
             }
+
+            _logger.Info($"Found {uids.Count} emails to download");
+            await ProcessDownloadHeadersAndBodies(uids);
+
+            _logger.Info($"{_nbProcessedHeaders} email headers have been successfully downloaded");
+            _logger.Info($"{_NbProcessedBodies} email bodies have been successfully downloaded");
         }
 
-        private async Task ProcessDownloadHeadersAndBodies(List<long> uids, List<AbstractConnection> connections)
+        private async Task ProcessDownloadHeadersAndBodies(List<long> uids)
         {
             var inputQueueHeaderDownload = new BlockingCollection<long>();
             var inputQueueBodyDownload = new BlockingCollection<long>();
@@ -91,36 +95,73 @@ namespace DeveloperTest.EmailService
 
             inputQueueHeaderDownload.CompleteAdding();
 
-            var tasksListDownloadHeaders = connections.Take(2)
-                .Select(x => Task.Run(async () =>
-                {
-                    foreach (var uid in inputQueueHeaderDownload.GetConsumingEnumerable())
+            Task t1 = Task.Run(async() =>
+            {
+                await inputQueueHeaderDownload.GetConsumingEnumerable().ParallelForEachAsync(
+                    async uid =>
                     {
-                        await DownloadHeader(uid, x);
+                        AbstractConnection availableCnx;
+                        while (true)
+                        {
+                            availableCnx = _sharedContext.GetOneAvailableConnection();
+                            if (availableCnx == null)
+                            {
+#if DEBUG
+                                _logger.Info("No connection for downloading header"+ uid);
+                                await Task.Delay(20);
+#endif
+                                continue;
+                            }
 
+#if DEBUG
+                            _logger.Info("Connection available for downloading header"+ uid);
+#endif
+                            break;
+                        }
+                        await DownloadHeader(uid, availableCnx);
+                        _sharedContext.FreeBusyConnection(availableCnx);
                         Interlocked.Increment(ref _nbProcessedHeaders);
-                        //Console.WriteLine($"Nb Processed Header : {_nbProcessedHeaders}");
                         inputQueueBodyDownload.Add(uid);
-                    }
-                    inputQueueBodyDownload.CompleteAdding();
-                }));
+                    },
+                    maxDegreeOfParallelism: 3);
+                inputQueueBodyDownload.CompleteAdding();
+            });
 
-            var tasksListDownloadBodies = WaitForConnectionSlotToBeAvailable().Skip(2).Take(3)
-                .Select(x => Task.Run(async () =>
-                {
-                    foreach (var uid in inputQueueBodyDownload.GetConsumingEnumerable())
+            Task t2 = Task.Run(async () =>
+            {
+                await inputQueueBodyDownload.GetConsumingEnumerable().ParallelForEachAsync(
+                    async uid =>
                     {
-                        await DownloadBody(uid, x);
+                        AbstractConnection availableCnx;
+                        while (true)
+                        {
+                            availableCnx = _sharedContext.GetOneAvailableConnection();
+                            if (availableCnx == null)
+                            {
+#if DEBUG
+                                _logger.Info("No connection for downloading body" + uid);
+                                await Task.Delay(20);
+#endif
+                                continue;
+                            }
 
+#if DEBUG
+                            _logger.Info("Connection available for downloading body" + uid);
+#endif
+                            break;
+                        }
+
+                        await DownloadBody(uid, availableCnx);
+                        _sharedContext.FreeBusyConnection(availableCnx);
                         Interlocked.Increment(ref _NbProcessedBodies);
-                        //Console.WriteLine($"Nb Processed Body : {_NbProcessedBodies}");
-                    }
-                }));
+                    },
+                    maxDegreeOfParallelism: 5);
+            });
 
             //DO NOT WAIT FOR THIS TASK TO COMPLETE AS THIS WILL BLOCK BODIES TO BE DOWNLOADED CONCURRENTLY
-            Task.WhenAll(tasksListDownloadHeaders);
+            Task.WhenAll(t1);
 
-            await Task.WhenAll(tasksListDownloadBodies);
+            await Task.WhenAll(t2);
         }
 
         private async Task DownloadHeader(long emailId, AbstractConnection connection)
@@ -129,17 +170,11 @@ namespace DeveloperTest.EmailService
             {
                 try
                 {
-                    connection.IsBusy = true;
                     var emailHeaderInfo = await cnx.ImapConnectionObj.GetMessageInfoByUIDAsync(emailId);
-
                 }
                 catch (Exception e)
                 {
                     _logger.ErrorException("An error occurred when trying to download email body", e);
-                }
-                finally
-                {
-                    connection.IsBusy = false;
                 }
             }
         }
@@ -151,7 +186,6 @@ namespace DeveloperTest.EmailService
                 var imapObj = cnx.ImapConnectionObj;
                 try
                 {
-                    connection.IsBusy = true;
                     var emailBodyStruct = await imapObj.GetBodyStructureByUIDAsync(emailId);
                     // Download only text and html parts
                     string text = null, html = null;
@@ -165,22 +199,7 @@ namespace DeveloperTest.EmailService
                 {
                     _logger.ErrorException("An error occurred when trying to download email header", e);
                 }
-                finally
-                {
-                    connection.IsBusy = false;
-                }
             }
-        }
-
-        private IEnumerable<AbstractConnection> WaitForConnectionSlotToBeAvailable()
-        {
-            var availableCnxs = _sharedContext.GetAllAvailableConnections();
-            foreach (var availableCnx in availableCnxs)
-            {
-                _logger.Info($"Connection Id {availableCnx.ConnectionId} is available...");
-            }
-
-            return availableCnxs;
         }
     }
 }

@@ -276,6 +276,10 @@ namespace DeveloperTest.ViewModels
             RaisePropertyChanged(() => ProtocolsLst);
             RaisePropertyChanged(() => EncryptionTypesLst);
 
+            ServerName = "imap-mail.outlook.com";
+            Username = "bgcode@hotmail.com";
+
+
             return base.ExecuteOnLoad();
         }
 

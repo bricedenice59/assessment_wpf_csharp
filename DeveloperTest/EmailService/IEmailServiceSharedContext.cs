@@ -7,6 +7,7 @@ namespace DeveloperTest.EmailService
     {
         void Init(ConnectionDescriptor cd, int nbConnections);
         List<AbstractConnection> GetAllConnections();
-        IEnumerable<AbstractConnection> GetAllAvailableConnections();
+        AbstractConnection GetOneAvailableConnection();
+        void FreeBusyConnection(AbstractConnection ac);
     }
 }

@@ -6,6 +6,7 @@ namespace DeveloperTest.EmailService
 {
     public class EmailServiceSharedContext : IEmailServiceSharedContext
     {
+        private static object _lock = new object();
         private List<AbstractConnection> _connections;
 
         public EmailServiceSharedContext()
@@ -29,9 +30,23 @@ namespace DeveloperTest.EmailService
             return _connections;
         }
 
-        public IEnumerable<AbstractConnection> GetAllAvailableConnections()
+        public AbstractConnection GetOneAvailableConnection()
         {
-            return _connections?.Where(x=>x.IsAlive && !x.IsBusy);
+            lock (_lock)
+            {
+                var cnx= _connections.FirstOrDefault(x => !x.IsBusy);
+                if(cnx != null)
+                    cnx.IsBusy = true;
+                return cnx;
+            }
+        }
+
+        public void FreeBusyConnection(AbstractConnection ac)
+        {
+            lock (_lock)
+            {
+                ac.IsBusy = false;
+            }
         }
     }
 }
