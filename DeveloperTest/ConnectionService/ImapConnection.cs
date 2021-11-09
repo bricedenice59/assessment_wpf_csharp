@@ -7,13 +7,12 @@ namespace DeveloperTest.ConnectionService
     {
         public Imap ImapConnectionObj => _imapConnectionObj;
 
-        private readonly Imap _imapConnectionObj;
+        private Imap _imapConnectionObj;
 
 
         public ImapConnection(int connectionId, ConnectionDescriptor connectionDescriptor) : 
             base(connectionId, connectionDescriptor)
         {
-            _imapConnectionObj = new Imap();
             IsBusy = false;
         }
 
@@ -23,6 +22,8 @@ namespace DeveloperTest.ConnectionService
         /// <returns></returns>
         public override async Task ConnectAsync()
         {
+            _imapConnectionObj = new Imap();
+
             Logger.Info($"Connection #{ConnectionId} Try connecting to Imap mail server {ConnectionDescriptor.Server}:{ConnectionDescriptor.Port} :");
 
             switch (ConnectionDescriptor.EncryptionType)
@@ -53,7 +54,7 @@ namespace DeveloperTest.ConnectionService
         {
             if (!IsAlive)
             {
-                Logger.Info("Cannot authenticate as connection to Imap mail server is down");
+                Logger.Info("Cannot authenticate as connection with Imap; connection to server is down");
                 return;
             }
             Logger.Info($"Connection #{ConnectionId} Try authenticating with username and password for Imap mail server");
@@ -62,9 +63,10 @@ namespace DeveloperTest.ConnectionService
             Logger.Info($"Connection #{ConnectionId} Authentication OK");
         }
 
-        public override void Disconnect()
+        public override async Task DisconnectAsync()
         {
             Logger.Info($"Connection #{ConnectionId} Try disconnecting from Imap mail server");
+            await _imapConnectionObj.CloseAsync(false);
             _imapConnectionObj?.Dispose();
             IsAlive = false;
         }

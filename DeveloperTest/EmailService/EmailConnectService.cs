@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 using CommonServiceLocator;
 using DeveloperTest.ConnectionService;
@@ -12,7 +11,7 @@ namespace DeveloperTest.EmailService
         private readonly ILogger _logger;
 
         private const int MaxActiveConnectionsImap = 5;
-        private const int MaxActiveConnectionsPop3 = 1;
+        private const int MaxActiveConnectionsPop3 = 3;
 
         public EmailConnectService(ConnectionDescriptor cd)
         {
@@ -76,14 +75,14 @@ namespace DeveloperTest.EmailService
         /// <summary>
         /// Close connection for all available connection slots (e.g. 5 for imap)
         /// </summary>
-        public void Stop()
+        public async Task DisconnectAllOpenedConnectionAsync()
         {
             var sharedContext = ServiceLocator.Current.GetInstance<IEmailServiceSharedContext>();
             foreach (var acnx in sharedContext.GetAllConnections())
             {
                 try
                 {
-                    acnx.Disconnect();
+                    await acnx.DisconnectAsync();
                 }
                 catch (Exception ex)
                 {

@@ -6,7 +6,7 @@ using Ninject.Extensions.Logging;
 
 namespace DeveloperTest.ConnectionService
 {
-    public abstract class AbstractConnection : IDisposable
+    public abstract class AbstractConnection
     {
         private long _isBusyValue = 0;
 
@@ -34,11 +34,6 @@ namespace DeveloperTest.ConnectionService
 
         public abstract Task AuthenticateAsync();
 
-        public abstract void Disconnect();
-
-        public void Dispose()
-        {
-            Disconnect();
-        }
+        public abstract Task DisconnectAsync();
     }
 }

@@ -9,13 +9,10 @@ namespace DeveloperTest.EmailService
         private static object _lock = new object();
         private List<AbstractConnection> _connections;
 
-        public EmailServiceSharedContext()
-        {
-            _connections = new List<AbstractConnection>();
-        }
 
         public void Init(ConnectionDescriptor cd, int nbConnections)
         {
+            _connections = new List<AbstractConnection>();
             for (int i = 0; i < nbConnections; i++)
             {
                 if (cd.MailProtocol == Protocols.IMAP)

@@ -179,6 +179,7 @@ namespace DeveloperTest.ViewModels
 
                     if (connectionFailed)
                     {
+                        await process.DisconnectAllOpenedConnectionAsync();
                         IsProcessing = false;
                         RaisePropertyChanged(() => IsProcessing);
                         return;
@@ -215,6 +216,7 @@ namespace DeveloperTest.ViewModels
 
                     if (authenticationFailed)
                     {
+                        await process.DisconnectAllOpenedConnectionAsync();
                         IsProcessing = false;
                         RaisePropertyChanged(() => IsProcessing);
                         return;
