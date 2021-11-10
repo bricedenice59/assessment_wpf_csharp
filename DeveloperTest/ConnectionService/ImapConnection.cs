@@ -8,8 +8,7 @@ namespace DeveloperTest.ConnectionService
         public Imap ImapConnectionObj => _imapConnectionObj;
 
         private Imap _imapConnectionObj;
-
-
+        
         public ImapConnection(int connectionId, ConnectionDescriptor connectionDescriptor) : 
             base(connectionId, connectionDescriptor)
         {

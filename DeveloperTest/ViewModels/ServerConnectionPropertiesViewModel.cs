@@ -148,29 +148,23 @@ namespace DeveloperTest.ViewModels
                     IsProcessing = true;
                     RaisePropertyChanged(() => IsProcessing);
 
+                    var connectionDataDescriptor =
+                        ServiceLocator.Current.GetInstance<IEmailConnectionDescriptorInstance>();
+
                     var cd = new ConnectionDescriptor
                     {
-                        EncryptionType = (EncryptionTypes)Enum.Parse(typeof(EncryptionTypes), _selectedEncryptionType),
-                        MailProtocol = (Protocols)Enum.Parse(typeof(Protocols), _selectedProtocol),
+                        EncryptionType = (EncryptionTypes) Enum.Parse(typeof(EncryptionTypes), _selectedEncryptionType),
+                        MailProtocol = (Protocols) Enum.Parse(typeof(Protocols), _selectedProtocol),
                         Port = Convert.ToInt32(Port),
                         Server = ServerName,
                         Username = Username,
                         Password = Password
                     };
+                    //save these data for the running program instance as we will need these for later
+                    connectionDataDescriptor.SetConnectionData(cd);
 
-                    EmailConnectService process = null;
-                    switch (cd.MailProtocol)
-                    {
-                        case Protocols.IMAP:
-                            process = new EmailConnectService(cd);
-                            break;
-                        case Protocols.POP3:
-                            process = new EmailConnectService(cd);
-                            break;
-                    }
-
-                    if (process == null)
-                        throw new NotImplementedException();
+                    EmailConnectService process = new EmailConnectService();
+                    process.CreatePoolConnections();
 
                     #region Connection stage
 
@@ -180,7 +174,7 @@ namespace DeveloperTest.ViewModels
                     string errorConnectionMessage = null;
                     try
                     {
-                        await process.ConnectToHost();
+                        await process.ConnectPooledConnectionsToHost();
                     }
                     catch (Exception e)
                     {
@@ -202,7 +196,7 @@ namespace DeveloperTest.ViewModels
 
                     if (connectionFailed)
                     {
-                        await process.DisconnectAllOpenedConnectionAsync();
+                        await process.DisconnectPooledConnectionsAsync();
                         IsProcessing = false;
                         RaisePropertyChanged(() => IsProcessing);
                         return;
@@ -218,7 +212,7 @@ namespace DeveloperTest.ViewModels
                     string errorMessage = null;
                     try
                     {
-                        await process.DoAuthenticate();
+                        await process.DoAuthenticatePooledConnections();
                     }
                     catch (Exception e)
                     {
@@ -240,7 +234,7 @@ namespace DeveloperTest.ViewModels
 
                     if (authenticationFailed)
                     {
-                        await process.DisconnectAllOpenedConnectionAsync();
+                        await process.DisconnectPooledConnectionsAsync();
                         IsProcessing = false;
                         RaisePropertyChanged(() => IsProcessing);
                         return;

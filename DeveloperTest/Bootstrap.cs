@@ -30,7 +30,10 @@ namespace DeveloperTest
             InjectViews();
             InjectViewModels();
             
-            Kernel.Bind<IEmailServiceSharedContext>().To<EmailServiceSharedContext>().InSingletonScope();
+            Kernel.Bind<IEmailConnectionPoolUtils>().To<EmailConnectionPoolUtils>().InSingletonScope();
+
+            //we want this class to have only one instance in the program life 
+            Kernel.Bind<IEmailConnectionDescriptorInstance>().To<EmailConnectionDescriptorInstance>().InSingletonScope();
         }
 
         private void InjectViews()

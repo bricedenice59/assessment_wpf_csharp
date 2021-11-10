@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using CommonServiceLocator;
 using DeveloperTest.EmailService;
 using DeveloperTest.MessageBus;
 using DeveloperTest.Utils.Events;
@@ -36,13 +37,21 @@ namespace DeveloperTest.ViewModels
 
                 Set(() => SelectedItem, ref _selectedItem, value);
 
+                Logger.Info($"Downloading body on demand for id:{value.Uid}");
+
+                if (value.IsBodyBeingDownloaded)
+                {
+                    Logger.Info($"Email body with id:{value.Uid} is being downloaded, body will be soon available...");
+                    return;
+                }
+
                 //if body not downloaded yet, then request to download it.
                 if (!value.IsBodyDownloaded)
                 {
-#if DEBUG
                     Logger.Info($"Email body with id:{value.Uid} has not been downloaded yet");
-#endif
+                    DownloadOnDemandAsync(value);
                 }
+                else Logger.Info($"Body already downloaded for id:{value.Uid}");
             }
         }
 
@@ -86,6 +95,43 @@ namespace DeveloperTest.ViewModels
         private void CallbackOnNewEmailDiscovered(object o, NewEmailDiscoveredEventArgs e)
         {
             EmailsList.Add(e?.Email);
+        }
+
+        #endregion
+
+        #region Methods
+
+        private void DownloadOnDemandAsync(EmailObject emailObj)
+        {
+            Task.Run(async () =>
+            {
+                //allocate new connection
+                var process = new EmailConnectService();
+                process.CreatePoolConnections(true);
+
+                //then connect and authenticate
+                bool connectSuccess = true;
+                try
+                {
+                    await process.ConnectPooledConnectionsToHost();
+                    await process.DoAuthenticatePooledConnections();
+                }
+                catch (Exception e)
+                {
+                    connectSuccess = false;
+                    Logger.ErrorException("Something went wrong when trying to create a new connection for item download on demand.", e);
+                }
+
+                //download body
+                if (connectSuccess)
+                {
+                    var availableCnx = process.ConnectionPoolUtils.GetOneAvailable();
+                    await _emailDownloadService.DownloadBody(emailObj, availableCnx);
+                }
+
+                //close and dispose connection
+                await process.DisconnectPooledConnectionsAsync();
+            });
         }
 
         #endregion

@@ -4,7 +4,7 @@ using DeveloperTest.ConnectionService;
 
 namespace DeveloperTest.EmailService
 {
-    public class EmailServiceSharedContext : IEmailServiceSharedContext
+    public class EmailConnectionPoolUtils : IEmailConnectionPoolUtils
     {
         private static object _lock = new object();
         private List<AbstractConnection> _connections;
@@ -21,12 +21,15 @@ namespace DeveloperTest.EmailService
             }
         }
 
-        public List<AbstractConnection> GetAllConnections()
+        public List<AbstractConnection> GetAll()
         {
-            return _connections;
+            lock (_lock)
+            {
+                return _connections;
+            }
         }
 
-        public AbstractConnection GetOneAvailableConnection()
+        public AbstractConnection GetOneAvailable()
         {
             lock (_lock)
             {
@@ -37,7 +40,7 @@ namespace DeveloperTest.EmailService
             }
         }
 
-        public void FreeBusyConnection(AbstractConnection ac)
+        public void FreeBusy(AbstractConnection ac)
         {
             lock (_lock)
             {

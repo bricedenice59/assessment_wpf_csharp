@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Windows;
 using CommonServiceLocator;
 using Dasync.Collections;
 using DeveloperTest.ConnectionService;
@@ -27,14 +28,14 @@ namespace DeveloperTest.EmailService
         public event EventHandler<ScanEmailsStatusChangedEventArgs> ScanEmailsStatusChanged;
         public event EventHandler<NewEmailDiscoveredEventArgs> NewEmailDiscovered;
         private readonly ILogger _logger;
-        private readonly IEmailServiceSharedContext _sharedContext;
+        private readonly IEmailConnectionPoolUtils _connectionPoolUtils;
 
         private int _nbProcessedHeaders;
         private int _nbProcessedBodies;
 
         public EmailDownloadService()
         {
-            _sharedContext = ServiceLocator.Current.GetInstance<IEmailServiceSharedContext>();
+            _connectionPoolUtils = ServiceLocator.Current.GetInstance<IEmailConnectionPoolUtils>();
 
             var loggerFactory = ServiceLocator.Current.GetInstance<ILoggerFactory>();
             _logger = loggerFactory.GetCurrentClassLogger();
@@ -47,7 +48,7 @@ namespace DeveloperTest.EmailService
         public async Task DownloadEmails()
         {
             _logger.Info("Start Download headers...");
-            var connections = _sharedContext.GetAllConnections();
+            var connections = _connectionPoolUtils.GetAll();
             if (connections == null || connections.Count == 0)
             {
                 _logger.Error("No connection exist");
@@ -93,8 +94,6 @@ namespace DeveloperTest.EmailService
                 throw new NotImplementedException("Cannot download headers for this type of connection!");
             }
 
-
-
             _logger.Info($"Found {uids.Count} emails to download");
 
             _logger.Info($"API returns emails sorted from oldest to newest");
@@ -122,7 +121,7 @@ namespace DeveloperTest.EmailService
             //Once the headers are downloaded, all connections (100%) will be used for the unfinished task (bodies download)
 
             //the trick is to use the maxDegreeOfParallelism of the foreach parallel object, like for CPUs, it will create a number of parallel tasks to be run in parallel
-            //At the beginning of the process, for imap connections, maximum 2 parallel tasks will process the download of headers and 3 for the bodies
+            //At the beginning of the process, for imap connections, maximum 3 parallel tasks will process the download of headers and 3 for the bodies
             //Once headers are downloaded, then the second method that download bodies can use the maximum 5 connections for faster download
             //For every task, one available connection "not busy yet" will be assigned to it, once task has completed, the "busy"connection is released and can be reused for the next task
 
@@ -133,7 +132,7 @@ namespace DeveloperTest.EmailService
 
             //case IMAP
             else if (maxParallelConnections == 5)
-                maxParallelConnectionsForHeaders = 2;
+                maxParallelConnectionsForHeaders = 4;
 
             var inputQueueHeaderDownload = new BlockingCollection<string>();
             var inputQueueBodyDownload = new BlockingCollection<EmailObject>();
@@ -152,7 +151,7 @@ namespace DeveloperTest.EmailService
                         AbstractConnection availableCnx;
                         while (true)
                         {
-                            availableCnx = _sharedContext.GetOneAvailableConnection();
+                            availableCnx = _connectionPoolUtils.GetOneAvailable();
                             if (availableCnx == null)
                             {
 #if DEBUG
@@ -167,14 +166,17 @@ namespace DeveloperTest.EmailService
 #endif
                             break;
                         }
-                        var downloadedHeader = await DownloadHeader(uid, availableCnx);
-                        _sharedContext.FreeBusyConnection(availableCnx);
+                        var email = await DownloadHeader(uid, availableCnx);
+
+                        _connectionPoolUtils.FreeBusy(availableCnx);
                         Interlocked.Increment(ref _nbProcessedHeaders);
-                        inputQueueBodyDownload.Add(downloadedHeader);
+                        //downloading headers is done
+                        //add the current mail to the queue of the next processing tasks
+                        inputQueueBodyDownload.Add(email);
 
                         //send downloaded header to UI
-                        if(downloadedHeader != null)
-                            NewEmailDiscovered?.Invoke(this, new NewEmailDiscoveredEventArgs(downloadedHeader));
+                        if(email != null)
+                            NewEmailDiscovered?.Invoke(this, new NewEmailDiscoveredEventArgs(email));
                     },
                     maxDegreeOfParallelism: maxParallelConnectionsForHeaders);
                 inputQueueBodyDownload.CompleteAdding();
@@ -185,10 +187,15 @@ namespace DeveloperTest.EmailService
                 await inputQueueBodyDownload.GetConsumingEnumerable().ParallelForEachAsync(
                     async email =>
                     {
+                        //don't download email body if there is already a task that does the job
+                        //this happens if a request on downloading on demand has been raised and at the same time the automatic download is still running
+                        if (email.IsBodyBeingDownloaded)
+                            return;
+
                         AbstractConnection availableCnx;
                         while (true)
                         {
-                            availableCnx = _sharedContext.GetOneAvailableConnection();
+                            availableCnx = _connectionPoolUtils.GetOneAvailable();
                             if (availableCnx == null)
                             {
 #if DEBUG
@@ -204,10 +211,9 @@ namespace DeveloperTest.EmailService
                             break;
                         }
 
-                        if(await DownloadBody(email, availableCnx))
-                            email.IsBodyDownloaded = true;
+                        await DownloadBody(email, availableCnx);
 
-                        _sharedContext.FreeBusyConnection(availableCnx);
+                        _connectionPoolUtils.FreeBusy(availableCnx);
                         Interlocked.Increment(ref _nbProcessedBodies);
                     },
                     maxDegreeOfParallelism: maxParallelConnections);
@@ -219,7 +225,7 @@ namespace DeveloperTest.EmailService
             await Task.WhenAll(t2);
         }
 
-        private async Task<EmailObject> DownloadHeader(string emailIdObj, AbstractConnection connection)
+        public async Task<EmailObject> DownloadHeader(string emailIdObj, AbstractConnection connection)
         {
             if (connection is ImapConnection imapCnx)
             {
@@ -242,7 +248,8 @@ namespace DeveloperTest.EmailService
                 }
             }
             else if (connection is Pop3Connection pop3Cnx)
-            { //Pop3 connection
+            {
+                //Pop3 connection
                 try
                 {
                     MailBuilder builder = new MailBuilder();
@@ -261,12 +268,14 @@ namespace DeveloperTest.EmailService
                     _logger.ErrorException("An error occurred when trying to download email body", e);
                 }
             }
+            else throw new NotImplementedException("Protocol not supported!");
 
             return null;
         }
 
-        private async Task<bool> DownloadBody(EmailObject emailObj, AbstractConnection connection)
+        public async Task DownloadBody(EmailObject emailObj, AbstractConnection connection)
         {
+            bool success = true;
             try
             {
                 emailObj.IsBodyBeingDownloaded = true;
@@ -286,10 +295,10 @@ namespace DeveloperTest.EmailService
                             html = await imapObj.GetTextByUIDAsync(emailBodyStruct.Html);
 
                         emailObj.Body = !string.IsNullOrEmpty(text) ? text : html;
-                        return true;
                     }
                     catch (Exception e)
                     {
+                        success = false;
                         _logger.ErrorException("An error occurred when trying to download email header", e);
                     }
                 }
@@ -311,20 +320,21 @@ namespace DeveloperTest.EmailService
                             html = email.Html;
 
                         emailObj.Body = !string.IsNullOrEmpty(text) ? text : html;
-                        return true;
                     }
                     catch (Exception e)
                     {
+                        success = false;
                         _logger.ErrorException("An error occurred when trying to download email body", e);
                     }
                 }
-
-                return false;
+                else throw new NotImplementedException("Protocol not supported!");
             }
             finally
             {
                 emailObj.IsBodyBeingDownloaded = false;
             }
+
+            emailObj.IsBodyDownloaded = success;
         }
     }
 }

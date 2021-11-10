@@ -9,31 +9,39 @@ namespace DeveloperTest.EmailService
     public class EmailConnectService
     {
         private readonly ILogger _logger;
+        private readonly IEmailConnectionPoolUtils _connectionPoolUtils;
+        private readonly IEmailConnectionDescriptorInstance _sharedConnectionDescriptor;
 
-        private const int MaxActiveConnectionsImap = 5;
-        private const int MaxActiveConnectionsPop3 = 3;
+        public IEmailConnectionPoolUtils ConnectionPoolUtils => _connectionPoolUtils;
 
-        public EmailConnectService(ConnectionDescriptor cd)
+        public EmailConnectService()
         {
+            _connectionPoolUtils = ServiceLocator.Current.GetInstance<IEmailConnectionPoolUtils>();
+            _sharedConnectionDescriptor = ServiceLocator.Current.GetInstance<IEmailConnectionDescriptorInstance>();
             var loggerFactory = ServiceLocator.Current.GetInstance<ILoggerFactory>();
             _logger = loggerFactory.GetCurrentClassLogger();
-
-            if (cd == null)
-                throw new ArgumentException("ConnectionDescriptor is null!");
-
-            var sharedContext = ServiceLocator.Current.GetInstance<IEmailServiceSharedContext>();
-            //create the x connections
-            sharedContext.Init(cd, cd.MailProtocol == Protocols.IMAP ? MaxActiveConnectionsImap : MaxActiveConnectionsPop3);
         }
 
         /// <summary>
-        /// Try to connect to host for all available connection slots (e.g. 5 for imap)
+        /// Create multiple connections, with a  number of connections that depends on email protocol selected
+        /// </summary>
+        public void CreatePoolConnections()
+        {
+            var cd = _sharedConnectionDescriptor.GetConnectionData();
+            if (cd == null)
+                throw new ArgumentException("ConnectionDescriptor is null!");
+
+            //create multiple connections, with nbConnections depending on mail protocol selected
+            _connectionPoolUtils.Init(cd, cd.GetMaxConnectionsForProtocol());
+        }
+
+        /// <summary>
+        /// Try to connect to host for all available connection
         /// </summary>
         /// <returns></returns>
-        public async Task ConnectToHost()
+        public async Task ConnectPooledConnectionsToHost()
         {
-            var sharedContext = ServiceLocator.Current.GetInstance<IEmailServiceSharedContext>();
-            foreach (var acnx in sharedContext.GetAllConnections())
+            foreach (var acnx in _connectionPoolUtils.GetAll())
             {
                 try
                 {
@@ -50,13 +58,12 @@ namespace DeveloperTest.EmailService
         }
 
         /// <summary>
-        /// Try to authenticate to host for all available connection slots (e.g. 5 for imap)
+        /// Try to authenticate to host for all available connection
         /// </summary>
         /// <returns></returns>
-        public async Task DoAuthenticate()
+        public async Task DoAuthenticatePooledConnections()
         {
-            var sharedContext = ServiceLocator.Current.GetInstance<IEmailServiceSharedContext>();
-            foreach (var acnx in sharedContext.GetAllConnections())
+            foreach (var acnx in _connectionPoolUtils.GetAll())
             {
                 try
                 {
@@ -73,12 +80,11 @@ namespace DeveloperTest.EmailService
         }
 
         /// <summary>
-        /// Close connection for all available connection slots (e.g. 5 for imap)
+        /// Close connection for all available connection slots
         /// </summary>
-        public async Task DisconnectAllOpenedConnectionAsync()
+        public async Task DisconnectPooledConnectionsAsync()
         {
-            var sharedContext = ServiceLocator.Current.GetInstance<IEmailServiceSharedContext>();
-            foreach (var acnx in sharedContext.GetAllConnections())
+            foreach (var acnx in _connectionPoolUtils.GetAll())
             {
                 try
                 {

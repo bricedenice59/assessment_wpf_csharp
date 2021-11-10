@@ -63,9 +63,11 @@
     </ApplicationDefinition>
     <Compile Include="Bootstrap.cs" />
     <Compile Include="ConnectionService\ConnectionPortUtils.cs" />
+    <Compile Include="EmailService\EmailConnectionDescriptorInstance.cs" />
     <Compile Include="EmailService\EmailDownloadService.cs" />
-    <Compile Include="EmailService\EmailServiceSharedContext.cs" />
-    <Compile Include="EmailService\IEmailServiceSharedContext.cs" />
+    <Compile Include="EmailService\EmailConnectionPoolUtils.cs" />
+    <Compile Include="EmailService\IEmailConnectionDescriptorInstance.cs" />
+    <Compile Include="EmailService\IEmailConnectionPoolUtils.cs" />
     <Compile Include="MessageBus\StartScanEmailMessage.cs" />
     <Compile Include="Utils\Events\NewEmailDiscoveredEventArgs.cs" />
     <Compile Include="Utils\Events\ScanEmailsStatusChangedEventArgs.cs" />
