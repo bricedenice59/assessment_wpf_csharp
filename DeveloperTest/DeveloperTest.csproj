@@ -66,6 +66,9 @@
     <Compile Include="EmailService\EmailDownloadService.cs" />
     <Compile Include="EmailService\EmailServiceSharedContext.cs" />
     <Compile Include="EmailService\IEmailServiceSharedContext.cs" />
+    <Compile Include="MessageBus\StartScanEmailMessage.cs" />
+    <Compile Include="Utils\Events\NewEmailDiscoveredEventArgs.cs" />
+    <Compile Include="Utils\Events\ScanEmailsStatusChangedEventArgs.cs" />
     <Compile Include="Utils\WPF\CommonDialogViewModel.cs" />
     <Compile Include="Utils\WPF\CommonViewModel.cs" />
     <Compile Include="ConnectionService\AbstractConnection.cs" />
@@ -79,7 +82,9 @@
       <DependentUpon>DoubleCircularProgressBar.xaml</DependentUpon>
     </Compile>
     <Compile Include="Utils\WPF\Components\Popups\DialogTypeLocator.cs" />
-    <Compile Include="ValueObjects\EmailHeader.cs" />
+    <Compile Include="Utils\Events\EventHandlerHelper.cs" />
+    <Compile Include="ValueObjects\EmailObject.cs" />
+    <Compile Include="ViewModels\EmailsHeaderDataViewModel.cs" />
     <Compile Include="ViewModels\Popups\ErrorPopupViewModel.cs" />
     <Compile Include="ViewModels\ServerConnectionPropertiesViewModel.cs" />
     <Compile Include="ViewModels\ViewModelLocator.cs" />
@@ -88,6 +93,9 @@
     <Compile Include="Utils\WPF\Components\WindowBase.cs" />
     <Compile Include="Views\Popups\ErrorPopupView.xaml.cs">
       <DependentUpon>ErrorPopupView.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\EmailsHeaderDataView.xaml.cs">
+      <DependentUpon>EmailsHeaderDataView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\ServerConnectionPropertiesView.xaml.cs">
       <DependentUpon>ServerConnectionPropertiesView.xaml</DependentUpon>
@@ -110,6 +118,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Popups\ErrorPopupView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\EmailsHeaderDataView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

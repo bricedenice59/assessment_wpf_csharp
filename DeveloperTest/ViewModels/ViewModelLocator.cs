@@ -41,11 +41,7 @@ namespace DeveloperTest.ViewModels
             ////}
         }
 
-        public static IMessenger ApplicationMessenger
-        {
-            get { return Messenger.Default; }
-        }
-
+        public EmailsHeaderDataViewModel EmailsHeaderDataViewModel => ServiceLocator.Current.GetInstance<EmailsHeaderDataViewModel>();
         public ServerConnectionPropertiesViewModel ServerConnectionProperties => ServiceLocator.Current.GetInstance<ServerConnectionPropertiesViewModel>();
         public ErrorPopupViewModel ErrorPopup => ServiceLocator.Current.GetInstance<ErrorPopupViewModel>();
         public static void Cleanup()

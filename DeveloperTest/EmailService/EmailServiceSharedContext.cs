@@ -9,7 +9,6 @@ namespace DeveloperTest.EmailService
         private static object _lock = new object();
         private List<AbstractConnection> _connections;
 
-
         public void Init(ConnectionDescriptor cd, int nbConnections)
         {
             _connections = new List<AbstractConnection>();

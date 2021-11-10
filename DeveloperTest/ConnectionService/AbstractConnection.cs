@@ -10,9 +10,9 @@ namespace DeveloperTest.ConnectionService
     {
         private long _isBusyValue = 0;
 
-        protected ILogger Logger { get; set; }
-        public int ConnectionId { get; set; }
-        public ConnectionDescriptor ConnectionDescriptor { get; set; }
+        protected ILogger Logger { get; }
+        public int ConnectionId { get; }
+        public ConnectionDescriptor ConnectionDescriptor { get; }
         public bool IsAlive { get; set; }
 
         public bool IsBusy

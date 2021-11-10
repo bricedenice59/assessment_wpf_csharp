@@ -14,9 +14,10 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
+        <views:EmailsHeaderDataView Grid.Row="1" Grid.Column="0" Margin="10,10"/>
         <views:ServerConnectionPropertiesView Grid.Row="0" Grid.Column="0" Margin="10,10"/>
 
-        <DataGrid Grid.Row="1" Grid.Column="0" Margin="10,10"/>
+
         <TextBox Grid.Row="0" Grid.RowSpan="2" Grid.Column="1"  Margin="10,10,0,0" 
                  TextWrapping="Wrap" 
                  Text="This should show the message body HTML/Text" 

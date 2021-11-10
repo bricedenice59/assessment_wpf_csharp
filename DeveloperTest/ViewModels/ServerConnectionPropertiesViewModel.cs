@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CommonServiceLocator;
 using DeveloperTest.ConnectionService;
 using DeveloperTest.EmailService;
+using DeveloperTest.MessageBus;
 using GalaSoft.MvvmLight.CommandWpf;
 using Ninject.Extensions.Logging;
 using MvvmDialogs;
@@ -116,6 +117,28 @@ namespace DeveloperTest.ViewModels
             }
         }
 
+        private bool CanStartRetrieveEmails()
+        {
+            return !string.IsNullOrEmpty(_serverName) &&
+                   !string.IsNullOrEmpty(_username) &&
+                   !string.IsNullOrEmpty(_password) &&
+                   string.IsNullOrEmpty(Error) &&
+                   !IsProcessing;
+        }
+
+        #endregion
+
+        #region Ctor
+
+        public ServerConnectionPropertiesViewModel(ILogger logger) : base(logger)
+        {
+            _dialogService = ServiceLocator.Current.GetInstance<IDialogService>();
+        }
+
+        #endregion
+
+        #region Commands
+
         public RelayCommand StartCommand
         {
             get
@@ -123,11 +146,11 @@ namespace DeveloperTest.ViewModels
                 return _startCommand ?? (_startCommand = new RelayCommand(async () =>
                 {
                     IsProcessing = true;
-                    RaisePropertyChanged(()=>IsProcessing);
+                    RaisePropertyChanged(() => IsProcessing);
 
                     var cd = new ConnectionDescriptor
                     {
-                        EncryptionType = (EncryptionTypes) Enum.Parse(typeof(EncryptionTypes), _selectedEncryptionType),
+                        EncryptionType = (EncryptionTypes)Enum.Parse(typeof(EncryptionTypes), _selectedEncryptionType),
                         MailProtocol = (Protocols)Enum.Parse(typeof(Protocols), _selectedProtocol),
                         Port = Convert.ToInt32(Port),
                         Server = ServerName,
@@ -206,7 +229,8 @@ namespace DeveloperTest.ViewModels
                     {
                         if (authenticationFailed)
                         {
-                            var errorPopupViewModelAuth = new ErrorPopupViewModel(Logger) {
+                            var errorPopupViewModelAuth = new ErrorPopupViewModel(Logger)
+                            {
                                 Message = errorMessage
                             };
 
@@ -228,8 +252,7 @@ namespace DeveloperTest.ViewModels
 
                     MessageCurrentOperation = "Downloading emails...";
 
-                    EmailDownloadService eds = new EmailDownloadService();
-                    await eds.DownloadEmails();
+                    MessengerInstance.Send(new StartScanEmailMessage());
 
                     #endregion
 
@@ -239,25 +262,8 @@ namespace DeveloperTest.ViewModels
             }
         }
 
-        private bool CanStartRetrieveEmails()
-        {
-            return !string.IsNullOrEmpty(_serverName) &&
-                   !string.IsNullOrEmpty(_username) &&
-                   !string.IsNullOrEmpty(_password) &&
-                   string.IsNullOrEmpty(Error) &&
-                   !IsProcessing;
-        }
-
         #endregion
 
-        #region Ctor
-
-        public ServerConnectionPropertiesViewModel(ILogger logger) : base(logger)
-        {
-            _dialogService = ServiceLocator.Current.GetInstance<IDialogService>();
-        }
-
-        #endregion
 
         #region overrides
 

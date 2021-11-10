@@ -5,6 +5,7 @@ using System.Data;
 using System.Linq;
 using System.Windows;
 using DeveloperTest.Utils;
+using GalaSoft.MvvmLight.Threading;
 
 namespace DeveloperTest
 {
@@ -13,6 +14,11 @@ namespace DeveloperTest
     /// </summary>
     public partial class App
     {
+        static App()
+        {
+            DispatcherHelper.Initialize();
+        }
+
         protected override void OnStartup(StartupEventArgs e)
         {
             InitBasicApp(Bootstrap.Instance.Kernel);

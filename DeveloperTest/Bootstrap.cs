@@ -27,11 +27,24 @@ namespace DeveloperTest
 
             Kernel.Bind<IDialogService>().ToMethod(context => new DialogService(null, new DialogTypeLocator()));
             Kernel.Load<Log4NetModule>();
-            Kernel.Bind<ServerConnectionPropertiesViewModel>().ToSelf().InTransientScope();
-            Kernel.Bind<ServerConnectionPropertiesView>().ToSelf().InSingletonScope();
-            Kernel.Bind<ErrorPopupViewModel>().ToSelf().InTransientScope();
-            Kernel.Bind<ErrorPopupView>().ToSelf().InTransientScope();
+            InjectViews();
+            InjectViewModels();
+            
             Kernel.Bind<IEmailServiceSharedContext>().To<EmailServiceSharedContext>().InSingletonScope();
+        }
+
+        private void InjectViews()
+        {
+            Kernel.Bind<EmailsHeaderDataView>().ToSelf().InTransientScope();
+            Kernel.Bind<ServerConnectionPropertiesView>().ToSelf().InTransientScope();
+            Kernel.Bind<ErrorPopupView>().ToSelf().InTransientScope();
+        }
+
+        private void InjectViewModels()
+        {
+            Kernel.Bind<EmailsHeaderDataViewModel>().ToSelf().InTransientScope();
+            Kernel.Bind<ServerConnectionPropertiesViewModel>().ToSelf().InTransientScope();
+            Kernel.Bind<ErrorPopupViewModel>().ToSelf().InTransientScope();
         }
     }
 }

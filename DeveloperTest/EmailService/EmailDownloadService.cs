@@ -2,20 +2,30 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using CommonServiceLocator;
 using Dasync.Collections;
 using DeveloperTest.ConnectionService;
+using DeveloperTest.Utils.Events;
+using DeveloperTest.ValueObjects;
 using Limilabs.Client.IMAP;
 using Limilabs.Mail;
 using Ninject.Extensions.Logging;
 
 namespace DeveloperTest.EmailService
 {
+    public enum ScanProgress
+    {
+        Canceled,
+        InProgress,
+        Completed
+    }
+
     public class EmailDownloadService
     {
+        public event EventHandler<ScanEmailsStatusChangedEventArgs> ScanEmailsStatusChanged;
+        public event EventHandler<NewEmailDiscoveredEventArgs> NewEmailDiscovered;
         private readonly ILogger _logger;
         private readonly IEmailServiceSharedContext _sharedContext;
 
@@ -63,7 +73,7 @@ namespace DeveloperTest.EmailService
             }
 
             _logger.Info($"Get emails uids");
-            List<object> uids = new List<object>();
+            List<string> uids = new List<string>();
             //I assume at that stage that all connections are available as this is the first action that comes straight after connecting the mail server
             if (connections[0] is ImapConnection connectionImap)
             {
@@ -72,12 +82,11 @@ namespace DeveloperTest.EmailService
                 //really don't like this but requesting for emails ids for different protocols returns different object types
                 //1.imap returns me a List<long>
                 //2.pop3 returns me a List<string>
-                uids = lstUidsLong.Cast<object>().ToList(); 
+                lstUidsLong.ForEach(x=> uids.Add(x.ToString())); 
             }
             else if (connections[0] is Pop3Connection connectionPop3)
             {
-                var lstUidsString = await connectionPop3.Pop3ConnectionObj.GetAllAsync();
-                uids = lstUidsString.Cast<object>().ToList();
+                uids = await connectionPop3.Pop3ConnectionObj.GetAllAsync();
             }
             else
             {
@@ -85,7 +94,10 @@ namespace DeveloperTest.EmailService
             }
 
             _logger.Info($"Found {uids.Count} emails to download");
+
+            ScanEmailsStatusChanged?.Invoke(this, new ScanEmailsStatusChangedEventArgs(ScanProgress.InProgress));
             await ProcessDownloadHeadersAndBodies(uids, connections.Count);
+            ScanEmailsStatusChanged?.Invoke(this, new ScanEmailsStatusChangedEventArgs(ScanProgress.Completed));
 
             _logger.Info($"{_nbProcessedHeaders} email headers have been successfully downloaded");
             _logger.Info($"{_nbProcessedBodies} email bodies have been successfully downloaded");
@@ -97,7 +109,7 @@ namespace DeveloperTest.EmailService
         /// <param name="uids">list of emails ids to proceed with</param>
         /// <param name="maxParallelConnections">maximum number of connections to use for the download process</param>
         /// <returns></returns>
-        private async Task ProcessDownloadHeadersAndBodies(List<object> uids, int maxParallelConnections)
+        private async Task ProcessDownloadHeadersAndBodies(List<string> uids, int maxParallelConnections)
         {
             //From testing experience, downloading email headers is always faster than downloading their bodies, hence the volume of data...
             //so I'll split concurrent connections by using 30% available connections for headers and 70% for bodies (that is true at the beginning of the process)
@@ -117,8 +129,8 @@ namespace DeveloperTest.EmailService
             else if (maxParallelConnections == 5)
                 maxParallelConnectionsForHeaders = 2;
 
-            var inputQueueHeaderDownload = new BlockingCollection<object>();
-            var inputQueueBodyDownload = new BlockingCollection<object>();
+            var inputQueueHeaderDownload = new BlockingCollection<string>();
+            var inputQueueBodyDownload = new BlockingCollection<string>();
 
             //feed the queue with all email ids we need to download headers for
             foreach (var id in uids)
@@ -149,10 +161,14 @@ namespace DeveloperTest.EmailService
 #endif
                             break;
                         }
-                        await DownloadHeader(uid, availableCnx);
+                        var downloadedHeader = await DownloadHeader(uid, availableCnx);
                         _sharedContext.FreeBusyConnection(availableCnx);
                         Interlocked.Increment(ref _nbProcessedHeaders);
                         inputQueueBodyDownload.Add(uid);
+
+                        //send downloaded header to UI
+                        if(downloadedHeader != null)
+                            NewEmailDiscovered?.Invoke(this, new NewEmailDiscoveredEventArgs(downloadedHeader));
                     },
                     maxDegreeOfParallelism: maxParallelConnectionsForHeaders);
                 inputQueueBodyDownload.CompleteAdding();
@@ -195,14 +211,21 @@ namespace DeveloperTest.EmailService
             await Task.WhenAll(t2);
         }
 
-        private async Task DownloadHeader(object emailIdObj, AbstractConnection connection)
+        private async Task<EmailObject> DownloadHeader(string emailIdObj, AbstractConnection connection)
         {
             if (connection is ImapConnection imapCnx)
             {
                 try
                 {
-                    var emailId = (long)emailIdObj;
+                    var emailId = long.Parse(emailIdObj);
                     var emailHeaderInfo = await imapCnx.ImapConnectionObj.GetMessageInfoByUIDAsync(emailId);
+
+                   return new EmailObject()
+                    {
+                        From = emailHeaderInfo.Envelope.From.FirstOrDefault()?.Address,
+                        Date = emailHeaderInfo.Envelope.Date?.ToString(),
+                        Subject = emailHeaderInfo.Envelope.Subject
+                    };
                 }
                 catch (Exception e)
                 {
@@ -214,24 +237,25 @@ namespace DeveloperTest.EmailService
                 try
                 {
                     MailBuilder builder = new MailBuilder();
-                    var emailId = emailIdObj.ToString();
-                    var emailHeaderInfo = await pop3Cnx.Pop3ConnectionObj.GetHeadersByUIDAsync(emailId);
+                    var emailHeaderInfo = await pop3Cnx.Pop3ConnectionObj.GetHeadersByUIDAsync(emailIdObj);
                 }
                 catch (Exception e)
                 {
                     _logger.ErrorException("An error occurred when trying to download email body", e);
                 }
             }
+
+            return null;
         }
 
-        private async Task DownloadBody(object emailIdObj, AbstractConnection connection)
+        private async Task DownloadBody(string emailIdObj, AbstractConnection connection)
         {
             if (connection is ImapConnection cnx)
             {
                 var imapObj = cnx.ImapConnectionObj;
                 try
                 {
-                    var emailId = (long)emailIdObj;
+                    var emailId = long.Parse(emailIdObj);
                     var emailBodyStruct = await imapObj.GetBodyStructureByUIDAsync(emailId);
                     // Download only text and html parts
                     string text = null, html = null;
@@ -244,6 +268,17 @@ namespace DeveloperTest.EmailService
                 catch (Exception e)
                 {
                     _logger.ErrorException("An error occurred when trying to download email header", e);
+                }
+            }
+            else if (connection is Pop3Connection pop3Cnx)
+            { //Pop3 connection
+                try
+                {
+
+                }
+                catch (Exception e)
+                {
+                    _logger.ErrorException("An error occurred when trying to download email body", e);
                 }
             }
         }

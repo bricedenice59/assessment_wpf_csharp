@@ -2,6 +2,7 @@
 using System.Windows.Input;
 using GalaSoft.MvvmLight;
 using GalaSoft.MvvmLight.CommandWpf;
+using GalaSoft.MvvmLight.Messaging;
 using Ninject.Extensions.Logging;
 
 namespace DeveloperTest.Utils.WPF
@@ -14,14 +15,14 @@ namespace DeveloperTest.Utils.WPF
 
         public ICommand OnLoadCommand { get { return _onLoadCommand ?? (_onLoadCommand = new RelayCommand(async () => await ExecuteOnLoad())); } }
 
-        #pragma warning disable 1998
+        protected static IMessenger ApplicationMessenger => Messenger.Default;
+
         /// <summary>
         /// Method executed on window load event.
         /// </summary>
         protected virtual async Task ExecuteOnLoad()
         {
         }
-        #pragma warning restore 1998
 
         public CommonViewModel(ILogger logger)
         {
