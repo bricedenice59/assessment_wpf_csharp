@@ -130,7 +130,7 @@ namespace DeveloperTest.EmailService
                 maxParallelConnectionsForHeaders = 2;
 
             var inputQueueHeaderDownload = new BlockingCollection<string>();
-            var inputQueueBodyDownload = new BlockingCollection<string>();
+            var inputQueueBodyDownload = new BlockingCollection<EmailObject>();
 
             //feed the queue with all email ids we need to download headers for
             foreach (var id in uids)
@@ -164,7 +164,7 @@ namespace DeveloperTest.EmailService
                         var downloadedHeader = await DownloadHeader(uid, availableCnx);
                         _sharedContext.FreeBusyConnection(availableCnx);
                         Interlocked.Increment(ref _nbProcessedHeaders);
-                        inputQueueBodyDownload.Add(uid);
+                        inputQueueBodyDownload.Add(downloadedHeader);
 
                         //send downloaded header to UI
                         if(downloadedHeader != null)
@@ -177,7 +177,7 @@ namespace DeveloperTest.EmailService
             Task t2 = Task.Run(async () =>
             {
                 await inputQueueBodyDownload.GetConsumingEnumerable().ParallelForEachAsync(
-                    async uid =>
+                    async email =>
                     {
                         AbstractConnection availableCnx;
                         while (true)
@@ -186,19 +186,21 @@ namespace DeveloperTest.EmailService
                             if (availableCnx == null)
                             {
 #if DEBUG
-                                _logger.Info("No connection for downloading body" + uid);
+                                _logger.Info("No connection for downloading body" + email.Uid);
                                 await Task.Delay(20);
 #endif
                                 continue;
                             }
 
 #if DEBUG
-                            _logger.Info("Connection available for downloading body" + uid);
+                            _logger.Info("Connection available for downloading body" + email.Uid);
 #endif
                             break;
                         }
 
-                        await DownloadBody(uid, availableCnx);
+                        if(await DownloadBody(email, availableCnx))
+                            email.IsBodyDownloaded = true;
+
                         _sharedContext.FreeBusyConnection(availableCnx);
                         Interlocked.Increment(ref _nbProcessedBodies);
                     },
@@ -222,6 +224,7 @@ namespace DeveloperTest.EmailService
 
                    return new EmailObject()
                     {
+                        Uid = emailIdObj,
                         From = emailHeaderInfo.Envelope.From.FirstOrDefault()?.Address,
                         Date = emailHeaderInfo.Envelope.Date?.ToString(),
                         Subject = emailHeaderInfo.Envelope.Subject
@@ -238,6 +241,14 @@ namespace DeveloperTest.EmailService
                 {
                     MailBuilder builder = new MailBuilder();
                     var emailHeaderInfo = await pop3Cnx.Pop3ConnectionObj.GetHeadersByUIDAsync(emailIdObj);
+                    IMail email = builder.CreateFromEml(emailHeaderInfo);
+                    return new EmailObject
+                    {
+                        Uid = emailIdObj,
+                        From = email.From.FirstOrDefault()?.Name,
+                        Date = email.Date?.ToString(),
+                        Subject = email.Subject
+                    };
                 }
                 catch (Exception e)
                 {
@@ -248,38 +259,65 @@ namespace DeveloperTest.EmailService
             return null;
         }
 
-        private async Task DownloadBody(string emailIdObj, AbstractConnection connection)
+        private async Task<bool> DownloadBody(EmailObject emailObj, AbstractConnection connection)
         {
-            if (connection is ImapConnection cnx)
+            try
             {
-                var imapObj = cnx.ImapConnectionObj;
-                try
+                emailObj.IsBodyBeingDownloaded = true;
+                if (connection is ImapConnection cnx)
                 {
-                    var emailId = long.Parse(emailIdObj);
-                    var emailBodyStruct = await imapObj.GetBodyStructureByUIDAsync(emailId);
-                    // Download only text and html parts
-                    string text = null, html = null;
+                    var imapObj = cnx.ImapConnectionObj;
+                    try
+                    {
+                        var emailId = long.Parse(emailObj.Uid);
+                        var emailBodyStruct = await imapObj.GetBodyStructureByUIDAsync(emailId);
+                        // Download only text and html parts
+                        string text = null, html = null;
 
-                    if (emailBodyStruct.Text != null)
-                        text = await imapObj.GetTextByUIDAsync(emailBodyStruct.Text);
-                    if (emailBodyStruct.Html != null)
-                        html = await imapObj.GetTextByUIDAsync(emailBodyStruct.Html);
+                        if (emailBodyStruct.Text != null)
+                            text = await imapObj.GetTextByUIDAsync(emailBodyStruct.Text);
+                        if (emailBodyStruct.Html != null)
+                            html = await imapObj.GetTextByUIDAsync(emailBodyStruct.Html);
+
+                        emailObj.Body = !string.IsNullOrEmpty(text) ? text : html;
+                        return true;
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.ErrorException("An error occurred when trying to download email header", e);
+                    }
                 }
-                catch (Exception e)
-                {
-                    _logger.ErrorException("An error occurred when trying to download email header", e);
+                else if (connection is Pop3Connection pop3Cnx)
+                { //Pop3 connection
+                    var pop3Obj = pop3Cnx.Pop3ConnectionObj;
+                    try
+                    {
+                        MailBuilder builder = new MailBuilder();
+                        var resMessage = await pop3Obj.GetMessageByUIDAsync(emailObj.Uid);
+                        IMail email = builder.CreateFromEml(resMessage);
+
+                        // Download only text and html parts
+                        string text = null, html = null;
+
+                        if (email.Text != null)
+                            text = email.Text;
+                        if (email.Html != null)
+                            html = email.Html;
+
+                        emailObj.Body = !string.IsNullOrEmpty(text) ? text : html;
+                        return true;
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.ErrorException("An error occurred when trying to download email body", e);
+                    }
                 }
+
+                return false;
             }
-            else if (connection is Pop3Connection pop3Cnx)
-            { //Pop3 connection
-                try
-                {
-
-                }
-                catch (Exception e)
-                {
-                    _logger.ErrorException("An error occurred when trying to download email body", e);
-                }
+            finally
+            {
+                emailObj.IsBodyBeingDownloaded = false;
             }
         }
     }

@@ -22,7 +22,10 @@
     </i:Interaction.Triggers>
 
     <Grid>
-        <DataGrid ItemsSource="{Binding  EmailsList}" >
+        <DataGrid ItemsSource="{Binding  EmailsList}" 
+                  AutoGenerateColumns="False"
+                  VirtualizingStackPanel.VirtualizationMode="Recycling"
+                  SelectedItem="{Binding SelectedItem }">
             <DataGrid.Columns>
                 <DataGridTextColumn Binding="{Binding From }" Header="From" IsReadOnly="True" Width="200"/>
                 <DataGridTextColumn Binding="{Binding Subject }" Header="Subject" IsReadOnly="True" Width="*"/>
