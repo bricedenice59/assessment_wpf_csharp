@@ -93,7 +93,13 @@ namespace DeveloperTest.EmailService
                 throw new NotImplementedException("Cannot download headers for this type of connection!");
             }
 
+
+
             _logger.Info($"Found {uids.Count} emails to download");
+
+            _logger.Info($"API returns emails sorted from oldest to newest");
+            _logger.Info($"Let's sort them in the opposite way(from newest to oldest) right now, so we don't need to deal with it later in UI");
+            uids.Reverse();
 
             ScanEmailsStatusChanged?.Invoke(this, new ScanEmailsStatusChangedEventArgs(ScanProgress.InProgress));
             await ProcessDownloadHeadersAndBodies(uids, connections.Count);
