@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using System.Windows.Threading;
 using CommonServiceLocator;
 using DeveloperTest.EmailService;
 using DeveloperTest.MessageBus;
@@ -43,16 +44,24 @@ namespace DeveloperTest.ViewModels
                 if (value.IsBodyBeingDownloaded)
                 {
                     Logger.Info($"Email body with id:{value.Uid} is being downloaded, body will be soon available...");
+                    //notify UI we have a busy download
+                    MessengerInstance.Send(new EmailBodyDownloadedMessage(value, true));
                     return;
                 }
 
                 //if body not downloaded yet, then request to download it.
                 if (!value.IsBodyDownloaded)
                 {
+                    MessengerInstance.Send(new EmailBodyDownloadedMessage(value, true));
                     Logger.Info($"Email body with id:{value.Uid} has not been downloaded yet");
-                    DownloadOnDemandAsync(value);
+                    DownloadOnDemandAndNotifyUI(value);
                 }
-                else Logger.Info($"Body already downloaded for id:{value.Uid}");
+                else
+                {
+                    MessengerInstance.Send(new EmailBodyDownloadedMessage(value, false));
+                    Logger.Info($"Body already downloaded for id:{value.Uid}");
+                }
+
             }
         }
 
@@ -103,9 +112,9 @@ namespace DeveloperTest.ViewModels
 
         #region Methods
 
-        private void DownloadOnDemandAsync(EmailObject emailObj)
+        private Task DownloadOnDemandAndNotifyUI(EmailObject emailObj)
         {
-            Task.Run(async () =>
+            return Task.Run(async () =>
             {
                 //allocate new connection
                 var newConnection = _connectionUtils.CreateOneConnection();
@@ -121,7 +130,7 @@ namespace DeveloperTest.ViewModels
                 catch (Exception e)
                 {
                     connectAndAuthenticateSuccess = false;
-                    Logger.ErrorException("Something went wrong when trying to create a new connection for item download on demand.", e);
+                    Logger.ErrorException("Something went wrong when trying to create a new connection for downloading an item on demand.", e);
                 }
 
                 //download body
@@ -130,6 +139,9 @@ namespace DeveloperTest.ViewModels
 
                 //close and dispose connection
                 await newConnection.DisconnectAsync();
+
+                //notify UI that the webpart can be now displayed
+                MessengerInstance.Send(new EmailBodyDownloadedMessage(emailObj, false));
             });
         }
 

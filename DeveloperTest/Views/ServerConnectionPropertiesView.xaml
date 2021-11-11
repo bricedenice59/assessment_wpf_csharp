@@ -71,7 +71,8 @@
                      Validation.ErrorTemplate="{StaticResource ErrorTemplate}"
                      Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" />
 
-            <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Left" VerticalAlignment="Center" Visibility="{Binding IsProcessing, Converter={StaticResource Bool2VisibilityConverter}}">
+            <StackPanel Orientation="Horizontal" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="10,0,0,0"
+                        Visibility="{Binding IsProcessing, Converter={StaticResource Bool2VisibilityConverter}}">
                 <components:DoubleCircularProgressBar Width="30" Height="30" StrokeColor="Blue"/>
                 <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Text="{Binding MessageCurrentOperation}"></TextBlock>
             </StackPanel>

@@ -5,11 +5,13 @@
                   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                   xmlns:developerTest="clr-namespace:DeveloperTest"
                   xmlns:viewModels="clr-namespace:DeveloperTest.ViewModels"
+                  xmlns:converters="clr-namespace:DeveloperTest.Utils.WPF.Converters"
                   StartupUri="MainWindow.xaml"
                   mc:Ignorable="d">
     <developerTest:BasicApplication.Resources>
         <ResourceDictionary>
             <BooleanToVisibilityConverter x:Key="Bool2VisibilityConverter"/>
+            <converters:VisibilityConverter x:Key="InverseBool2VisibilityConverter" WhenFalse="Visible" WhenTrue="Collapsed"/>
             <viewModels:ViewModelLocator x:Key="VMLocator" d:IsDataSource="True" />
         </ResourceDictionary>
     </developerTest:BasicApplication.Resources>

@@ -15,7 +15,7 @@ namespace DeveloperTest.Utils.WPF
 
         public ICommand OnLoadCommand { get { return _onLoadCommand ?? (_onLoadCommand = new RelayCommand(async () => await ExecuteOnLoad())); } }
 
-        protected static IMessenger ApplicationMessenger => Messenger.Default;
+        public static IMessenger ApplicationMessenger => Messenger.Default;
 
         /// <summary>
         /// Method executed on window load event.

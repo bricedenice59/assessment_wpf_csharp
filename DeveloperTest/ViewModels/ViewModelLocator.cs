@@ -42,6 +42,7 @@ namespace DeveloperTest.ViewModels
         }
 
         public EmailsHeaderDataViewModel EmailsHeaderDataViewModel => ServiceLocator.Current.GetInstance<EmailsHeaderDataViewModel>();
+        public EmailsBodyDataViewModel EmailsBodyDataViewModel => ServiceLocator.Current.GetInstance<EmailsBodyDataViewModel>();
         public ServerConnectionPropertiesViewModel ServerConnectionProperties => ServiceLocator.Current.GetInstance<ServerConnectionPropertiesViewModel>();
         public ErrorPopupViewModel ErrorPopup => ServiceLocator.Current.GetInstance<ErrorPopupViewModel>();
         public static void Cleanup()

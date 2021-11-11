@@ -68,9 +68,12 @@
     <Compile Include="EmailService\EmailConnectionUtils.cs" />
     <Compile Include="EmailService\IEmailConnectionDescriptorInstance.cs" />
     <Compile Include="EmailService\IEmailConnectionUtils.cs" />
+    <Compile Include="MessageBus\EmailBodyDownloadedMessage.cs" />
+    <Compile Include="MessageBus\LoadHtmlMessage.cs" />
     <Compile Include="MessageBus\StartScanEmailMessage.cs" />
     <Compile Include="Utils\Events\NewEmailDiscoveredEventArgs.cs" />
     <Compile Include="Utils\Events\ScanEmailsStatusChangedEventArgs.cs" />
+    <Compile Include="Utils\HtmlUtils.cs" />
     <Compile Include="Utils\WPF\CommonDialogViewModel.cs" />
     <Compile Include="Utils\WPF\CommonViewModel.cs" />
     <Compile Include="ConnectionService\AbstractConnection.cs" />
@@ -84,7 +87,9 @@
     </Compile>
     <Compile Include="Utils\WPF\Components\Popups\DialogTypeLocator.cs" />
     <Compile Include="Utils\Events\EventHandlerHelper.cs" />
+    <Compile Include="Utils\WPF\Converters\VisibilityConverter.cs" />
     <Compile Include="ValueObjects\EmailObject.cs" />
+    <Compile Include="ViewModels\EmailsBodyDataViewModel.cs" />
     <Compile Include="ViewModels\EmailsHeaderDataViewModel.cs" />
     <Compile Include="ViewModels\Popups\ErrorPopupViewModel.cs" />
     <Compile Include="ViewModels\ServerConnectionPropertiesViewModel.cs" />
@@ -92,6 +97,9 @@
     <Compile Include="Utils\WPF\Components\Popups\DialogWindow.cs" />
     <Compile Include="Utils\WPF\Components\Popups\IClosing.cs" />
     <Compile Include="Utils\WPF\Components\WindowBase.cs" />
+    <Compile Include="Views\EmailsBodyDataView.xaml.cs">
+      <DependentUpon>EmailsBodyDataView.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Popups\ErrorPopupView.xaml.cs">
       <DependentUpon>ErrorPopupView.xaml</DependentUpon>
     </Compile>
@@ -115,6 +123,10 @@
       <SubType>Code</SubType>
     </Compile>
     <Page Include="Utils\WPF\Components\DoubleCircularProgressBar.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\EmailsBodyDataView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -160,6 +172,9 @@
   <ItemGroup>
     <PackageReference Include="AsyncEnumerator">
       <Version>4.0.2</Version>
+    </PackageReference>
+    <PackageReference Include="CefSharp.Wpf">
+      <Version>95.7.141</Version>
     </PackageReference>
     <PackageReference Include="CommonServiceLocator">
       <Version>2.0.6</Version>

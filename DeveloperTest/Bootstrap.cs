@@ -39,6 +39,7 @@ namespace DeveloperTest
         private void InjectViews()
         {
             Kernel.Bind<EmailsHeaderDataView>().ToSelf().InTransientScope();
+            Kernel.Bind<EmailsBodyDataView>().ToSelf().InTransientScope();
             Kernel.Bind<ServerConnectionPropertiesView>().ToSelf().InTransientScope();
             Kernel.Bind<ErrorPopupView>().ToSelf().InTransientScope();
         }
@@ -46,6 +47,7 @@ namespace DeveloperTest
         private void InjectViewModels()
         {
             Kernel.Bind<EmailsHeaderDataViewModel>().ToSelf().InTransientScope();
+            Kernel.Bind<EmailsBodyDataViewModel>().ToSelf().InTransientScope();
             Kernel.Bind<ServerConnectionPropertiesViewModel>().ToSelf().InTransientScope();
             Kernel.Bind<ErrorPopupViewModel>().ToSelf().InTransientScope();
         }

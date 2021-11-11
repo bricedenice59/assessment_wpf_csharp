@@ -8,6 +8,7 @@ using System.Windows;
 using CommonServiceLocator;
 using Dasync.Collections;
 using DeveloperTest.ConnectionService;
+using DeveloperTest.Utils;
 using DeveloperTest.Utils.Events;
 using DeveloperTest.ValueObjects;
 using Limilabs.Client.IMAP;
@@ -110,18 +111,18 @@ namespace DeveloperTest.EmailService
             //Once the headers are downloaded, all connections (100%) will be used for the unfinished task (bodies download)
 
             //the trick is to use the maxDegreeOfParallelism of the foreach parallel object, like for CPUs, it will create a number of parallel tasks to be run in parallel
-            //At the beginning of the process, for imap connections, maximum 3 parallel tasks will process the download of headers and 3 for the bodies
+            //At the beginning of the process, for imap connections, maximum 4 parallel tasks will process the download of headers and 1 for the bodies
             //Once headers are downloaded, then the second method that download bodies can use the maximum 5 connections for faster download
             //For every task, one available connection "not busy yet" will be assigned to it, once task has completed, the "busy"connection is released and can be reused for the next task
 
             int maxParallelConnectionsForHeaders = 1;
             //case POP3
             if (maxParallelConnections == 3)
-                maxParallelConnectionsForHeaders = 1;
+                maxParallelConnectionsForHeaders = 2;
 
             //case IMAP
             else if (maxParallelConnections == 5)
-                maxParallelConnectionsForHeaders = 3;
+                maxParallelConnectionsForHeaders = 4;
 
             var inputQueueHeaderDownload = new BlockingCollection<string>();
             var inputQueueBodyDownload = new BlockingCollection<EmailObject>();
@@ -144,14 +145,14 @@ namespace DeveloperTest.EmailService
                             if (availableCnx == null)
                             {
 #if DEBUG
-                                _logger.Info("No connection for downloading header"+ uid);
+                                _logger.Debug("No connection for downloading header"+ uid);
                                 await Task.Delay(20);
 #endif
                                 continue;
                             }
 
 #if DEBUG
-                            _logger.Info("Connection available for downloading header"+ uid);
+                            _logger.Debug("Connection available for downloading header"+ uid);
 #endif
                             break;
                         }
@@ -188,15 +189,15 @@ namespace DeveloperTest.EmailService
                             if (availableCnx == null)
                             {
 #if DEBUG
-                                _logger.Info("No connection for downloading body" + email.Uid);
+                                _logger.Debug("No connection for downloading body" + email.Uid);
                                 await Task.Delay(20);
 #endif
                                 continue;
                             }
-
 #if DEBUG
-                            _logger.Info("Connection available for downloading body" + email.Uid);
+                            _logger.Debug("Connection available for downloading header" + email.Uid);
 #endif
+
                             break;
                         }
 
@@ -283,7 +284,7 @@ namespace DeveloperTest.EmailService
                         if (emailBodyStruct.Html != null)
                             html = await imapObj.GetTextByUIDAsync(emailBodyStruct.Html);
 
-                        emailObj.Body = !string.IsNullOrEmpty(text) ? text : html;
+                        emailObj.Body = html ?? HtmlUtils.GetHtmlFromText(text);
                     }
                     catch (Exception e)
                     {
@@ -308,7 +309,7 @@ namespace DeveloperTest.EmailService
                         if (email.Html != null)
                             html = email.Html;
 
-                        emailObj.Body = !string.IsNullOrEmpty(text) ? text : html;
+                        emailObj.Body = html ?? HtmlUtils.GetHtmlFromText(text);
                     }
                     catch (Exception e)
                     {
