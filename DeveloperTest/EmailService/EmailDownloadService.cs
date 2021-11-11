@@ -71,11 +71,7 @@ namespace DeveloperTest.EmailService
                 //really don't like this but requesting for emails ids for different protocols returns different object types
                 //1.imap returns me a List<long>
                 //2.pop3 returns me a List<string>
-                lstUidsLong.ForEach(x=> uids.Add(x.ToString())); 
-            }
-            else if (connections[0] is Pop3Connection connectionPop3)
-            {
-                uids = await connectionPop3.Pop3ConnectionObj.GetAllAsync();
+                lstUidsLong.ForEach(x=> uids.Add(x.ToString()));
 
                 _logger.Info($"API returns emails sorted from oldest to newest");
                 _logger.Info($"Let's sort them in the opposite way(from newest to oldest) right now, so we don't need to deal with it later in UI");
@@ -87,6 +83,10 @@ namespace DeveloperTest.EmailService
 
                 //reverse randomly ? hihi :)
                 uids.Reverse();
+            }
+            else if (connections[0] is Pop3Connection connectionPop3)
+            {
+                uids = await connectionPop3.Pop3ConnectionObj.GetAllAsync();
             }
             else
             {
