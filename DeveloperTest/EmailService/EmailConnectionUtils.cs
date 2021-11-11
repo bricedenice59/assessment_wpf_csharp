@@ -113,6 +113,7 @@ namespace DeveloperTest.EmailService
                 catch (Limilabs.Client.ServerException serverException)
                 {
                     _logger.ErrorException($"Could not connect to host server! connection id {cnx.ConnectionId}", serverException);
+                    throw;
                 }
                 try
                 {
@@ -121,6 +122,7 @@ namespace DeveloperTest.EmailService
                 catch (Limilabs.Client.ServerException serverException)
                 {
                     _logger.ErrorException($"Authentication failed for connection id {cnx.ConnectionId}", serverException);
+                    throw;
                 }
             }
         }

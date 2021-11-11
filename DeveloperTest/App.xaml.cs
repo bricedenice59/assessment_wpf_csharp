@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Configuration;
-using System.Data;
-using System.Linq;
-using System.Windows;
-using DeveloperTest.Utils;
+﻿using System.Windows;
+using CommonServiceLocator;
 using GalaSoft.MvvmLight.Threading;
+using Ninject.Extensions.Logging;
 
 namespace DeveloperTest
 {
@@ -21,6 +17,7 @@ namespace DeveloperTest
 
         protected override void OnStartup(StartupEventArgs e)
         {
+            DispatcherUnhandledException += App_DispatcherUnhandledException;
             InitBasicApp(Bootstrap.Instance.Kernel);
 
             Logger.Info("Check if program is running...");
@@ -29,6 +26,14 @@ namespace DeveloperTest
                 Logger.Info("An instance of this program is already running...");
                 Current.Shutdown();
             }
+        }
+
+        private void App_DispatcherUnhandledException(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+        {
+            var loggerFactory = ServiceLocator.Current.GetInstance<ILoggerFactory>();
+            var logger = loggerFactory.GetCurrentClassLogger();
+
+            logger.ErrorException("an unhandled error was caught but could not been handled", e.Exception);
         }
     }
 }
