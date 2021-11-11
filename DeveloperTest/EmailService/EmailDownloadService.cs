@@ -76,6 +76,17 @@ namespace DeveloperTest.EmailService
             else if (connections[0] is Pop3Connection connectionPop3)
             {
                 uids = await connectionPop3.Pop3ConnectionObj.GetAllAsync();
+
+                _logger.Info($"API returns emails sorted from oldest to newest");
+                _logger.Info($"Let's sort them in the opposite way(from newest to oldest) right now, so we don't need to deal with it later in UI");
+
+                //for my testings on
+                //1.retrieving gmail emails with imap protocol returns me emails sorted from newest to oldest
+                //2.retrieving hotmail emails with imap protocol returns me emails sorted from oldest to newest
+                //what is going with this API, that's a bug or the API documentation is wrong
+
+                //reverse randomly ? hihi :)
+                uids.Reverse();
             }
             else
             {
@@ -83,10 +94,6 @@ namespace DeveloperTest.EmailService
             }
 
             _logger.Info($"Found {uids.Count} emails to download");
-
-            _logger.Info($"API returns emails sorted from oldest to newest");
-            _logger.Info($"Let's sort them in the opposite way(from newest to oldest) right now, so we don't need to deal with it later in UI");
-            uids.Reverse();
 
             ScanEmailsStatusChanged?.Invoke(this, new ScanEmailsStatusChangedEventArgs(ScanProgress.InProgress));
             await ProcessDownloadHeadersAndBodies(uids, connections.Count);
