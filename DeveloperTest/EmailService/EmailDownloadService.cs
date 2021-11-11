@@ -28,14 +28,14 @@ namespace DeveloperTest.EmailService
         public event EventHandler<ScanEmailsStatusChangedEventArgs> ScanEmailsStatusChanged;
         public event EventHandler<NewEmailDiscoveredEventArgs> NewEmailDiscovered;
         private readonly ILogger _logger;
-        private readonly IEmailConnectionPoolUtils _connectionPoolUtils;
+        private readonly IEmailConnectionUtils _connectionUtils;
 
         private int _nbProcessedHeaders;
         private int _nbProcessedBodies;
 
         public EmailDownloadService()
         {
-            _connectionPoolUtils = ServiceLocator.Current.GetInstance<IEmailConnectionPoolUtils>();
+            _connectionUtils = ServiceLocator.Current.GetInstance<IEmailConnectionUtils>();
 
             var loggerFactory = ServiceLocator.Current.GetInstance<ILoggerFactory>();
             _logger = loggerFactory.GetCurrentClassLogger();
@@ -48,7 +48,7 @@ namespace DeveloperTest.EmailService
         public async Task DownloadEmails()
         {
             _logger.Info("Start Download headers...");
-            var connections = _connectionPoolUtils.GetAll();
+            var connections = _connectionUtils.GetAll();
             if (connections == null || connections.Count == 0)
             {
                 _logger.Error("No connection exist");
@@ -56,21 +56,10 @@ namespace DeveloperTest.EmailService
             }
 
             //Select Inbox for all existing connections
-            foreach (var abstractConnection in connections)
+            foreach (var connection in connections)
             {
-                if (abstractConnection is ImapConnection cnxImap)
-                {
-                    _logger.Info($"Select Inbox for Connection id {abstractConnection.ConnectionId}...");
-                    await cnxImap.ImapConnectionObj.SelectInboxAsync();
-                }
-                else if (abstractConnection is Pop3Connection)
-                {
-                    _logger.Info($"No need to select inbox for pop3 connection, go to next step...");
-                }
-                else
-                {
-                    throw new NotImplementedException("Cannot download emails for this type of connection!");
-                }
+                _logger.Info($"Select Inbox for Connection id {connection.ConnectionId}...");
+                await _connectionUtils.SelectInboxAsync(connection);
             }
 
             _logger.Info($"Get emails uids");
@@ -151,7 +140,7 @@ namespace DeveloperTest.EmailService
                         AbstractConnection availableCnx;
                         while (true)
                         {
-                            availableCnx = _connectionPoolUtils.GetOneAvailable();
+                            availableCnx = _connectionUtils.GetOneAvailable();
                             if (availableCnx == null)
                             {
 #if DEBUG
@@ -168,7 +157,7 @@ namespace DeveloperTest.EmailService
                         }
                         var email = await DownloadHeader(uid, availableCnx);
 
-                        _connectionPoolUtils.FreeBusy(availableCnx);
+                        _connectionUtils.FreeBusy(availableCnx);
                         Interlocked.Increment(ref _nbProcessedHeaders);
                         //downloading headers is done
                         //add the current mail to the queue of the next processing tasks
@@ -195,7 +184,7 @@ namespace DeveloperTest.EmailService
                         AbstractConnection availableCnx;
                         while (true)
                         {
-                            availableCnx = _connectionPoolUtils.GetOneAvailable();
+                            availableCnx = _connectionUtils.GetOneAvailable();
                             if (availableCnx == null)
                             {
 #if DEBUG
@@ -213,7 +202,7 @@ namespace DeveloperTest.EmailService
 
                         await DownloadBody(email, availableCnx);
 
-                        _connectionPoolUtils.FreeBusy(availableCnx);
+                        _connectionUtils.FreeBusy(availableCnx);
                         Interlocked.Increment(ref _nbProcessedBodies);
                     },
                     maxDegreeOfParallelism: maxParallelConnections);

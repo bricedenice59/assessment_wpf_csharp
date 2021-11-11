@@ -65,9 +65,9 @@
     <Compile Include="ConnectionService\ConnectionPortUtils.cs" />
     <Compile Include="EmailService\EmailConnectionDescriptorInstance.cs" />
     <Compile Include="EmailService\EmailDownloadService.cs" />
-    <Compile Include="EmailService\EmailConnectionPoolUtils.cs" />
+    <Compile Include="EmailService\EmailConnectionUtils.cs" />
     <Compile Include="EmailService\IEmailConnectionDescriptorInstance.cs" />
-    <Compile Include="EmailService\IEmailConnectionPoolUtils.cs" />
+    <Compile Include="EmailService\IEmailConnectionUtils.cs" />
     <Compile Include="MessageBus\StartScanEmailMessage.cs" />
     <Compile Include="Utils\Events\NewEmailDiscoveredEventArgs.cs" />
     <Compile Include="Utils\Events\ScanEmailsStatusChangedEventArgs.cs" />
@@ -77,7 +77,6 @@
     <Compile Include="ConnectionService\ConnectionDescriptor.cs" />
     <Compile Include="ConnectionService\ImapConnection.cs" />
     <Compile Include="ConnectionService\Pop3Connection.cs" />
-    <Compile Include="EmailService\EmailConnectService.cs" />
     <Compile Include="Utils\Extensions\DialogServiceExtensions.cs" />
     <Compile Include="Utils\NinjectServiceLocator.cs" />
     <Compile Include="Utils\WPF\Components\DoubleCircularProgressBar.xaml.cs">

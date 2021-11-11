@@ -18,6 +18,7 @@ namespace DeveloperTest.ViewModels
 
         private readonly EventHandler<NewEmailDiscoveredEventArgs> _newEmailDiscoveredEventHandler;
         private readonly EventHandler<ScanEmailsStatusChangedEventArgs> _scanEmailsStatusChangedEventHandler;
+        private readonly IEmailConnectionUtils _connectionUtils;
         private readonly EmailDownloadService _emailDownloadService;
         private EmailObject _selectedItem;
         #endregion
@@ -61,17 +62,18 @@ namespace DeveloperTest.ViewModels
 
         public EmailsHeaderDataViewModel(ILogger logger) : base(logger)
         {
+            _connectionUtils = ServiceLocator.Current.GetInstance<IEmailConnectionUtils>();
             _emailDownloadService = new EmailDownloadService();
             EmailsList = new ObservableCollection<EmailObject>();
 
             _newEmailDiscoveredEventHandler = EventHandlerHelper.SafeEventHandler<NewEmailDiscoveredEventArgs>(CallbackOnNewEmailDiscovered);
             _scanEmailsStatusChangedEventHandler = EventHandlerHelper.SafeEventHandler<ScanEmailsStatusChangedEventArgs>(CallbackOnScanEmailsStatusChanged);
 
-            ApplicationMessenger.Register<StartScanEmailMessage>(this, m =>
+            ApplicationMessenger.Register<StartScanEmailMessage>(this, async m =>
             {
                 _emailDownloadService.NewEmailDiscovered += _newEmailDiscoveredEventHandler;
                 _emailDownloadService.ScanEmailsStatusChanged += _scanEmailsStatusChangedEventHandler;
-                _emailDownloadService.DownloadEmails();
+                await _emailDownloadService.DownloadEmails();
             });
         }
 
@@ -106,31 +108,30 @@ namespace DeveloperTest.ViewModels
             Task.Run(async () =>
             {
                 //allocate new connection
-                var process = new EmailConnectService();
-                process.CreatePoolConnections(true);
+                var newConnection = _connectionUtils.CreateOneConnection();
 
                 //then connect and authenticate
-                bool connectSuccess = true;
+                bool connectAndAuthenticateSuccess = true;
                 try
                 {
-                    await process.ConnectPooledConnectionsToHost();
-                    await process.DoAuthenticatePooledConnections();
+                    await newConnection.ConnectAsync();
+                    await newConnection.AuthenticateAsync();
                 }
                 catch (Exception e)
                 {
-                    connectSuccess = false;
+                    connectAndAuthenticateSuccess = false;
                     Logger.ErrorException("Something went wrong when trying to create a new connection for item download on demand.", e);
                 }
 
+                //select Inbox
+                await _connectionUtils.SelectInboxAsync(newConnection);
+
                 //download body
-                if (connectSuccess)
-                {
-                    var availableCnx = process.ConnectionPoolUtils.GetOneAvailable();
-                    await _emailDownloadService.DownloadBody(emailObj, availableCnx);
-                }
+                if (connectAndAuthenticateSuccess)
+                    await _emailDownloadService.DownloadBody(emailObj, newConnection);
 
                 //close and dispose connection
-                await process.DisconnectPooledConnectionsAsync();
+                await newConnection.DisconnectAsync();
             });
         }
 

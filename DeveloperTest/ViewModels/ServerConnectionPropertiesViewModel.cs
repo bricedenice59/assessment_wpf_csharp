@@ -29,6 +29,7 @@ namespace DeveloperTest.ViewModels
         private readonly IDialogService _dialogService;
         private bool _isProcessing;
         private string _messageCurrentOperation;
+        private readonly IEmailConnectionUtils _connectionUtils;
 
         #endregion
 
@@ -132,6 +133,7 @@ namespace DeveloperTest.ViewModels
 
         public ServerConnectionPropertiesViewModel(ILogger logger) : base(logger)
         {
+            _connectionUtils = ServiceLocator.Current.GetInstance<IEmailConnectionUtils>();
             _dialogService = ServiceLocator.Current.GetInstance<IDialogService>();
         }
 
@@ -163,18 +165,17 @@ namespace DeveloperTest.ViewModels
                     //save these data for the running program instance as we will need these for later
                     connectionDataDescriptor.SetConnectionData(cd);
 
-                    EmailConnectService process = new EmailConnectService();
-                    process.CreatePoolConnections();
+                    connectionDataDescriptor.ConnectionsList = _connectionUtils.CreateConnections();
 
-                    #region Connection stage
+                    #region Connection stage && Authentication stage
 
-                    MessageCurrentOperation = "Connecting...";
+                    MessageCurrentOperation = "Connecting and authenticating...";
 
                     bool connectionFailed = false;
                     string errorConnectionMessage = null;
                     try
                     {
-                        await process.ConnectPooledConnectionsToHost();
+                        await _connectionUtils.ConnectAndAuthenticateAsync(connectionDataDescriptor.ConnectionsList);
                     }
                     catch (Exception e)
                     {
@@ -187,7 +188,7 @@ namespace DeveloperTest.ViewModels
                         {
                             var errorPopupViewModelConn = new ErrorPopupViewModel(Logger)
                             {
-                                Message = $"Could not connect to host {cd.Server}:{cd.Port}" + "\r\n" + errorConnectionMessage
+                                Message = $"Could not connect/authenticate,  host {cd.Server}:{cd.Port}" + "\r\n" + errorConnectionMessage
                             };
 
                             await _dialogService.ShowDialogAsync(this, errorPopupViewModelConn);
@@ -196,45 +197,7 @@ namespace DeveloperTest.ViewModels
 
                     if (connectionFailed)
                     {
-                        await process.DisconnectPooledConnectionsAsync();
-                        IsProcessing = false;
-                        RaisePropertyChanged(() => IsProcessing);
-                        return;
-                    }
-
-                    #endregion
-
-                    #region Authentication stage
-
-                    MessageCurrentOperation = "Authenticating...";
-
-                    bool authenticationFailed = false;
-                    string errorMessage = null;
-                    try
-                    {
-                        await process.DoAuthenticatePooledConnections();
-                    }
-                    catch (Exception e)
-                    {
-                        authenticationFailed = true;
-                        errorMessage = e.Message;
-                    }
-                    finally
-                    {
-                        if (authenticationFailed)
-                        {
-                            var errorPopupViewModelAuth = new ErrorPopupViewModel(Logger)
-                            {
-                                Message = errorMessage
-                            };
-
-                            await _dialogService.ShowDialogAsync(this, errorPopupViewModelAuth);
-                        }
-                    }
-
-                    if (authenticationFailed)
-                    {
-                        await process.DisconnectPooledConnectionsAsync();
+                        await _connectionUtils.DisconnectAsync(connectionDataDescriptor.ConnectionsList);
                         IsProcessing = false;
                         RaisePropertyChanged(() => IsProcessing);
                         return;

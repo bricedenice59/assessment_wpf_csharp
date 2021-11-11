@@ -17,7 +17,7 @@ namespace DeveloperTest
         protected void InitBasicApp(IKernel kernel)
         {
             log4net.Config.XmlConfigurator.Configure();
-            // Init Ninject.
+            // AddConnectionsToPool Ninject.
             var serviceLocator = new NinjectServiceLocator(kernel);
             ServiceLocator.SetLocatorProvider(() => serviceLocator);
 
