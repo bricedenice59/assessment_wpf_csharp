@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using CommonServiceLocator;
 using DeveloperTest.ConnectionService;
 using Ninject.Extensions.Logging;
 
@@ -14,10 +13,10 @@ namespace DeveloperTest.EmailService
         private readonly ILogger _logger;
         private readonly IEmailConnectionDescriptorInstance _sharedConnectionDescriptor;
 
-        public EmailConnectionUtils()
+        public EmailConnectionUtils(IEmailConnectionDescriptorInstance sharedConnectionDescriptor,
+            ILoggerFactory loggerFactory)
         {
-            _sharedConnectionDescriptor = ServiceLocator.Current.GetInstance<IEmailConnectionDescriptorInstance>();
-            var loggerFactory = ServiceLocator.Current.GetInstance<ILoggerFactory>();
+            _sharedConnectionDescriptor = sharedConnectionDescriptor;
             _logger = loggerFactory.GetCurrentClassLogger();
         }
 

@@ -29,10 +29,9 @@ namespace DeveloperTest
             Kernel.Load<Log4NetModule>();
             InjectViews();
             InjectViewModels();
-            
-            Kernel.Bind<IEmailConnectionUtils>().To<EmailConnectionUtils>().InSingletonScope();
 
-            //we want this class to have only one instance in the program life 
+            Kernel.Bind<IEmailConnectionUtils>().To<EmailConnectionUtils>().InSingletonScope();
+            Kernel.Bind<IEmailDownloadService>().To<EmailDownloadService>().InSingletonScope();
             Kernel.Bind<IEmailConnectionDescriptorInstance>().To<EmailConnectionDescriptorInstance>().InSingletonScope();
         }
 

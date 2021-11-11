@@ -68,6 +68,7 @@
     <Compile Include="EmailService\EmailConnectionUtils.cs" />
     <Compile Include="EmailService\IEmailConnectionDescriptorInstance.cs" />
     <Compile Include="EmailService\IEmailConnectionUtils.cs" />
+    <Compile Include="EmailService\IEmailDownloadService.cs" />
     <Compile Include="MessageBus\EmailBodyDownloadedMessage.cs" />
     <Compile Include="MessageBus\LoadHtmlMessage.cs" />
     <Compile Include="MessageBus\StartScanEmailMessage.cs" />

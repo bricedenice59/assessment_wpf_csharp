@@ -24,7 +24,7 @@ namespace DeveloperTest.EmailService
         Completed
     }
 
-    public class EmailDownloadService
+    public class EmailDownloadService : IEmailDownloadService
     {
         public event EventHandler<ScanEmailsStatusChangedEventArgs> ScanEmailsStatusChanged;
         public event EventHandler<NewEmailDiscoveredEventArgs> NewEmailDiscovered;
@@ -34,12 +34,10 @@ namespace DeveloperTest.EmailService
         private int _nbProcessedHeaders;
         private int _nbProcessedBodies;
 
-        public EmailDownloadService()
+        public EmailDownloadService(ILogger logger, IEmailConnectionUtils connectionUtils)
         {
-            _connectionUtils = ServiceLocator.Current.GetInstance<IEmailConnectionUtils>();
-
-            var loggerFactory = ServiceLocator.Current.GetInstance<ILoggerFactory>();
-            _logger = loggerFactory.GetCurrentClassLogger();
+            _logger = logger;
+            _connectionUtils = connectionUtils;
         }
 
         /// <summary>
@@ -215,7 +213,7 @@ namespace DeveloperTest.EmailService
             await Task.WhenAll(t2);
         }
 
-        public async Task<EmailObject> DownloadHeader(string emailIdObj, AbstractConnection connection)
+        private async Task<EmailObject> DownloadHeader(string emailIdObj, AbstractConnection connection)
         {
             if (connection is ImapConnection imapCnx)
             {

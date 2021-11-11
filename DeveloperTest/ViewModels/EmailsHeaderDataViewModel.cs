@@ -17,14 +17,36 @@ namespace DeveloperTest.ViewModels
     {
         #region Fields
 
-        private readonly EventHandler<NewEmailDiscoveredEventArgs> _newEmailDiscoveredEventHandler;
-        private readonly EventHandler<ScanEmailsStatusChangedEventArgs> _scanEmailsStatusChangedEventHandler;
         private readonly IEmailConnectionUtils _connectionUtils;
-        private readonly EmailDownloadService _emailDownloadService;
+        private readonly IEmailDownloadService _emailDownloadService;
         private EmailObject _selectedItem;
+        private string _currentStatus;
+        private bool _showAnimationStatus;
+
+        private readonly EventHandler<ScanEmailsStatusChangedEventArgs> _scanEmailsStatusChangedEventHandler;
+        private readonly EventHandler<NewEmailDiscoveredEventArgs> _newEmailDiscoveredEventHandler;
+
         #endregion
 
         #region Properties
+
+        public string CurrentStatus
+        {
+            get => _currentStatus;
+            set
+            {
+                Set(() => CurrentStatus, ref _currentStatus, value);
+            }
+        }
+
+        public bool ShowStatusAnimation
+        {
+            get => _showAnimationStatus;
+            set
+            {
+                Set(() => ShowStatusAnimation, ref _showAnimationStatus, value);
+            }
+        }
 
         public ObservableCollection<EmailObject> EmailsList { get; }
 
@@ -61,7 +83,6 @@ namespace DeveloperTest.ViewModels
                     MessengerInstance.Send(new EmailBodyDownloadedMessage(value, false));
                     Logger.Info($"Body already downloaded for id:{value.Uid}");
                 }
-
             }
         }
 
@@ -69,11 +90,14 @@ namespace DeveloperTest.ViewModels
 
         #region Ctor
 
-        public EmailsHeaderDataViewModel(ILogger logger) : base(logger)
+        public EmailsHeaderDataViewModel(ILogger logger, IEmailConnectionUtils connectionUtils,
+            IEmailDownloadService emailDownloadService) : base(logger)
         {
-            _connectionUtils = ServiceLocator.Current.GetInstance<IEmailConnectionUtils>();
-            _emailDownloadService = new EmailDownloadService();
+            _connectionUtils = connectionUtils;
+            _emailDownloadService = emailDownloadService;
             EmailsList = new ObservableCollection<EmailObject>();
+            CurrentStatus = null;
+            ShowStatusAnimation = false;
 
             _newEmailDiscoveredEventHandler = EventHandlerHelper.SafeEventHandler<NewEmailDiscoveredEventArgs>(CallbackOnNewEmailDiscovered);
             _scanEmailsStatusChangedEventHandler = EventHandlerHelper.SafeEventHandler<ScanEmailsStatusChangedEventArgs>(CallbackOnScanEmailsStatusChanged);
@@ -95,8 +119,12 @@ namespace DeveloperTest.ViewModels
             switch (e.Status)
             {
                 case ScanProgress.InProgress:
+                    ShowStatusAnimation = true;
+                    CurrentStatus = "Download in progress...";
                     return;
                 case ScanProgress.Completed:
+                    CurrentStatus = "Download completed ! :)";
+                    ShowStatusAnimation = false;
                     _emailDownloadService.NewEmailDiscovered -= _newEmailDiscoveredEventHandler;
                     _emailDownloadService.ScanEmailsStatusChanged -= _scanEmailsStatusChangedEventHandler;
                     break;

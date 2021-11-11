@@ -26,16 +26,25 @@ namespace DeveloperTest.ViewModels
         private string _username;
         private string _password;
         private RelayCommand _startCommand;
-        private readonly IDialogService _dialogService;
+        private bool _btnStartHasBeenClicked;
         private bool _isProcessing;
         private string _messageCurrentOperation;
         private readonly IEmailConnectionUtils _connectionUtils;
-
+        private readonly IDialogService _dialogService;
         #endregion
 
         #region Properties
         public List<string> ProtocolsLst { get; set; }
         public List<string> EncryptionTypesLst { get; set; }
+
+        public bool BtnStartHasBeenUsed
+        {
+            get => _btnStartHasBeenClicked;
+            set
+            {
+                Set(() => BtnStartHasBeenUsed, ref _btnStartHasBeenClicked, value);
+            }
+        }
 
         public bool IsProcessing
         {
@@ -124,7 +133,7 @@ namespace DeveloperTest.ViewModels
                    !string.IsNullOrEmpty(_username) &&
                    !string.IsNullOrEmpty(_password) &&
                    string.IsNullOrEmpty(Error) &&
-                   !IsProcessing;
+                   !IsProcessing && !BtnStartHasBeenUsed;
         }
 
         #endregion
@@ -212,6 +221,10 @@ namespace DeveloperTest.ViewModels
                     MessengerInstance.Send(new StartScanEmailMessage());
 
                     #endregion
+
+                    //make the start button not click-able anymore for this test
+                    BtnStartHasBeenUsed = true;
+                    RaisePropertyChanged(() => BtnStartHasBeenUsed);
 
                     IsProcessing = false;
                     RaisePropertyChanged(() => IsProcessing);
