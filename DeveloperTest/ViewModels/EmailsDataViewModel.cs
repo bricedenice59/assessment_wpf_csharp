@@ -1,19 +1,16 @@
 ﻿using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
-using System.Windows.Threading;
-using CommonServiceLocator;
 using DeveloperTest.EmailService;
 using DeveloperTest.MessageBus;
 using DeveloperTest.Utils.Events;
 using DeveloperTest.Utils.WPF;
 using DeveloperTest.ValueObjects;
-using Limilabs.Client.IMAP;
 using Ninject.Extensions.Logging;
 
 namespace DeveloperTest.ViewModels
 {
-    public class EmailsHeaderDataViewModel : CommonViewModel
+    public class EmailsDataViewModel : CommonViewModel
     {
         #region Fields
 
@@ -61,22 +58,30 @@ namespace DeveloperTest.ViewModels
 
                 Set(() => SelectedItem, ref _selectedItem, value);
 
-                Logger.Info($"Downloading body on demand for id:{value.Uid}");
-
                 if (value.IsBodyBeingDownloaded)
                 {
                     Logger.Info($"Email body with id:{value.Uid} is being downloaded, body will be soon available...");
+
                     //notify UI we have a busy download
                     MessengerInstance.Send(new EmailBodyDownloadedMessage(value, true));
+
+                    //subscribe event to be later notified once the message is downloaded and then notify UI
+                    value.OnEmailBodyDownloaded += OnEmailBodyDownloaded;
                     return;
                 }
 
                 //if body not downloaded yet, then request to download it.
                 if (!value.IsBodyDownloaded)
                 {
+                    //notify UI we have a busy download
                     MessengerInstance.Send(new EmailBodyDownloadedMessage(value, true));
                     Logger.Info($"Email body with id:{value.Uid} has not been downloaded yet");
-                    DownloadOnDemandAndNotifyUI(value);
+
+                    //subscribe event to be later notified once the message is downloaded and then notify UI
+                    value.OnEmailBodyDownloaded += OnEmailBodyDownloaded;
+
+                    //let's force downloading it
+                    DownloadOnDemand(value);
                 }
                 else
                 {
@@ -86,11 +91,19 @@ namespace DeveloperTest.ViewModels
             }
         }
 
+        private void OnEmailBodyDownloaded(object sender, DownloadBodyFinishedEventArgs e)
+        {
+            //only update UI if the current selected item is still the same, otherwise ignore
+            if(_selectedItem.Uid == e.Email.Uid)
+                MessengerInstance.Send(new EmailBodyDownloadedMessage(e.Email, false));
+            e.Email.OnEmailBodyDownloaded -= OnEmailBodyDownloaded;
+        }
+
         #endregion
 
         #region Ctor
 
-        public EmailsHeaderDataViewModel(ILogger logger, IEmailConnectionUtils connectionUtils,
+        public EmailsDataViewModel(ILogger logger, IEmailConnectionUtils connectionUtils,
             IEmailDownloadService emailDownloadService) : base(logger)
         {
             _connectionUtils = connectionUtils;
@@ -140,7 +153,7 @@ namespace DeveloperTest.ViewModels
 
         #region Methods
 
-        private Task DownloadOnDemandAndNotifyUI(EmailObject emailObj)
+        private Task DownloadOnDemand(EmailObject emailObj)
         {
             return Task.Run(async () =>
             {
@@ -167,9 +180,6 @@ namespace DeveloperTest.ViewModels
 
                 //close and dispose connection
                 await newConnection.DisconnectAsync();
-
-                //notify UI that the webpart can be now displayed
-                MessengerInstance.Send(new EmailBodyDownloadedMessage(emailObj, false));
             });
         }
 

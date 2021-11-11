@@ -36,13 +36,11 @@ namespace DeveloperTest.ConnectionService
 
             if (_pop3ConnectionObj.Connected)
                 Logger.Info(_pop3ConnectionObj.ServerGreeting.Message);
-
-            IsAlive = _pop3ConnectionObj.Connected;
         }
 
         public override async Task AuthenticateAsync()
         {
-            if (!IsAlive)
+            if (!_pop3ConnectionObj.Connected)
             {
                 Logger.Info("Cannot authenticate as connection with Pop3; connection to server is down");
                 return;
@@ -58,7 +56,6 @@ namespace DeveloperTest.ConnectionService
             Logger.Info($"Connection #{ConnectionId} Try disconnecting from Pop3 mail server");
             await _pop3ConnectionObj.CloseAsync(false);
             _pop3ConnectionObj?.Dispose();
-            IsAlive = false;
         }
     }
 }

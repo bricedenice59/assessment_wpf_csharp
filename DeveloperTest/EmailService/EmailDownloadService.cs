@@ -263,66 +263,60 @@ namespace DeveloperTest.EmailService
 
         public async Task DownloadBody(EmailObject emailObj, AbstractConnection connection)
         {
-            bool success = true;
-            try
+            if (connection == null || 
+                (connection.GetType() != typeof(ImapConnection) && connection.GetType() != typeof(Pop3Connection)))
+                return;
+
+            emailObj.IsBodyBeingDownloaded = true;
+            if (connection is ImapConnection cnx)
             {
-                emailObj.IsBodyBeingDownloaded = true;
-                if (connection is ImapConnection cnx)
+                var imapObj = cnx.ImapConnectionObj;
+                try
                 {
-                    var imapObj = cnx.ImapConnectionObj;
-                    try
-                    {
-                        var emailId = long.Parse(emailObj.Uid);
-                        var emailBodyStruct = await imapObj.GetBodyStructureByUIDAsync(emailId);
-                        // Download only text and html parts
-                        string text = null, html = null;
+                    var emailId = long.Parse(emailObj.Uid);
+                    var emailBodyStruct = await imapObj.GetBodyStructureByUIDAsync(emailId);
+                    // Download only text and html parts
+                    string text = null, html = null;
 
-                        if (emailBodyStruct.Text != null)
-                            text = await imapObj.GetTextByUIDAsync(emailBodyStruct.Text);
-                        if (emailBodyStruct.Html != null)
-                            html = await imapObj.GetTextByUIDAsync(emailBodyStruct.Html);
+                    if (emailBodyStruct.Text != null)
+                        text = await imapObj.GetTextByUIDAsync(emailBodyStruct.Text);
+                    if (emailBodyStruct.Html != null)
+                        html = await imapObj.GetTextByUIDAsync(emailBodyStruct.Html);
 
-                        emailObj.Body = html ?? HtmlUtils.GetHtmlFromText(text);
-                    }
-                    catch (Exception e)
-                    {
-                        success = false;
-                        _logger.ErrorException("An error occurred when trying to download email header", e);
-                    }
+                    //some conversion work for later displaying html instead of text
+                    emailObj.Body = html ?? HtmlUtils.GetHtmlFromText(text);
                 }
-                else if (connection is Pop3Connection pop3Cnx)
-                { //Pop3 connection
-                    var pop3Obj = pop3Cnx.Pop3ConnectionObj;
-                    try
-                    {
-                        MailBuilder builder = new MailBuilder();
-                        var resMessage = await pop3Obj.GetMessageByUIDAsync(emailObj.Uid);
-                        IMail email = builder.CreateFromEml(resMessage);
-
-                        // Download only text and html parts
-                        string text = null, html = null;
-
-                        if (email.Text != null)
-                            text = email.Text;
-                        if (email.Html != null)
-                            html = email.Html;
-
-                        emailObj.Body = html ?? HtmlUtils.GetHtmlFromText(text);
-                    }
-                    catch (Exception e)
-                    {
-                        success = false;
-                        _logger.ErrorException("An error occurred when trying to download email body", e);
-                    }
+                catch (Exception e)
+                {
+                    _logger.ErrorException("An error occurred when trying to download email header", e);
                 }
-                else throw new NotImplementedException("Protocol not supported!");
             }
-            finally
-            {
-                emailObj.IsBodyBeingDownloaded = false;
+            else if (connection is Pop3Connection pop3Cnx)
+            { //Pop3 connection
+                var pop3Obj = pop3Cnx.Pop3ConnectionObj;
+                try
+                {
+                    MailBuilder builder = new MailBuilder();
+                    var resMessage = await pop3Obj.GetMessageByUIDAsync(emailObj.Uid);
+                    IMail email = builder.CreateFromEml(resMessage);
+
+                    // Download only text and html parts
+                    string text = null, html = null;
+
+                    if (email.Text != null)
+                        text = email.Text;
+                    if (email.Html != null)
+                        html = email.Html;
+
+                    emailObj.Body = html ?? HtmlUtils.GetHtmlFromText(text);
+                }
+                catch (Exception e)
+                {
+                    _logger.ErrorException("An error occurred when trying to download email body", e);
+                }
             }
 
-            emailObj.IsBodyDownloaded = success;
+            emailObj.SetBodyIsNowDownloaded();
         }
     }
 }

@@ -45,7 +45,7 @@ namespace DeveloperTest
 
         private void InjectViewModels()
         {
-            Kernel.Bind<EmailsHeaderDataViewModel>().ToSelf().InTransientScope();
+            Kernel.Bind<EmailsDataViewModel>().ToSelf().InTransientScope();
             Kernel.Bind<EmailsBodyDataViewModel>().ToSelf().InTransientScope();
             Kernel.Bind<ServerConnectionPropertiesViewModel>().ToSelf().InTransientScope();
             Kernel.Bind<ErrorPopupViewModel>().ToSelf().InTransientScope();

@@ -41,8 +41,6 @@ namespace DeveloperTest.ConnectionService
 
             if(_imapConnectionObj.Connected)
                 Logger.Info(_imapConnectionObj.ServerGreeting.Message);
-
-            IsAlive = _imapConnectionObj.Connected;
         }
 
         /// <summary>
@@ -51,7 +49,7 @@ namespace DeveloperTest.ConnectionService
         /// <returns></returns>
         public override async Task AuthenticateAsync()
         {
-            if (!IsAlive)
+            if (!_imapConnectionObj.Connected)
             {
                 Logger.Info("Cannot authenticate as connection with Imap; connection to server is down");
                 return;
@@ -67,7 +65,6 @@ namespace DeveloperTest.ConnectionService
             Logger.Info($"Connection #{ConnectionId} Try disconnecting from Imap mail server");
             await _imapConnectionObj.CloseAsync(false);
             _imapConnectionObj?.Dispose();
-            IsAlive = false;
         }
     }
 }

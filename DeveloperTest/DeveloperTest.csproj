@@ -72,6 +72,7 @@
     <Compile Include="MessageBus\EmailBodyDownloadedMessage.cs" />
     <Compile Include="MessageBus\LoadHtmlMessage.cs" />
     <Compile Include="MessageBus\StartScanEmailMessage.cs" />
+    <Compile Include="Utils\Events\DownloadBodyFinishedEventArgs.cs" />
     <Compile Include="Utils\Events\NewEmailDiscoveredEventArgs.cs" />
     <Compile Include="Utils\Events\ScanEmailsStatusChangedEventArgs.cs" />
     <Compile Include="Utils\HtmlUtils.cs" />
@@ -91,7 +92,7 @@
     <Compile Include="Utils\WPF\Converters\VisibilityConverter.cs" />
     <Compile Include="ValueObjects\EmailObject.cs" />
     <Compile Include="ViewModels\EmailsBodyDataViewModel.cs" />
-    <Compile Include="ViewModels\EmailsHeaderDataViewModel.cs" />
+    <Compile Include="ViewModels\EmailsDataViewModel.cs" />
     <Compile Include="ViewModels\Popups\ErrorPopupViewModel.cs" />
     <Compile Include="ViewModels\ServerConnectionPropertiesViewModel.cs" />
     <Compile Include="ViewModels\ViewModelLocator.cs" />

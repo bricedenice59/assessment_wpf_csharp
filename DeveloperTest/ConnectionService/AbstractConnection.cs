@@ -13,7 +13,6 @@ namespace DeveloperTest.ConnectionService
         protected ILogger Logger { get; }
         public int ConnectionId { get; }
         public ConnectionDescriptor ConnectionDescriptor { get; }
-        public bool IsAlive { get; set; }
 
         public bool IsBusy
         {

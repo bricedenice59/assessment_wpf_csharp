@@ -2,12 +2,11 @@
 
 namespace DeveloperTest.Utils.Events
 {
-    public class NewEmailDiscoveredEventArgs : System.EventArgs
+    public class DownloadBodyFinishedEventArgs : System.EventArgs
     {
         public EmailObject Email { get; }
 
-
-        public NewEmailDiscoveredEventArgs(EmailObject emailObj)
+        public DownloadBodyFinishedEventArgs(EmailObject emailObj)
         {
             Email = emailObj;
         }

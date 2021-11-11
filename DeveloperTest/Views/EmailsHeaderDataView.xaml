@@ -9,7 +9,7 @@
              xmlns:components="clr-namespace:DeveloperTest.Utils.WPF.Components"
              mc:Ignorable="d" 
              d:DesignHeight="200" d:DesignWidth="800"
-             DataContext="{Binding EmailsHeaderDataViewModel, Source={StaticResource VMLocator}}"
+             DataContext="{Binding EmailsDataViewModel, Source={StaticResource VMLocator}}"
              md:DialogServiceViews.IsRegistered="True" >
 
     <UserControl.Resources>

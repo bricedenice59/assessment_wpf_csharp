@@ -11,26 +11,38 @@
              DataContext="{Binding EmailsBodyDataViewModel, Source={StaticResource VMLocator}}"
              md:DialogServiceViews.IsRegistered="True" >
 
-    <Grid>
-        <cefSharp:ChromiumWebBrowser Grid.Row="0" x:Name="_webBrowser"
-                                     Visibility="{Binding IsBodyAvailable, Converter={StaticResource Bool2VisibilityConverter}}"/>
 
-        <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
-                    Visibility="{Binding IsBodyAvailable, Converter={StaticResource InverseBool2VisibilityConverter}}">
-            <components:DoubleCircularProgressBar Width="30" Height="30" StrokeColor="Blue"/>
-            <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Text="Downloading..."/>
-        </StackPanel>
-        <Grid.Style>
-            <Style TargetType="{x:Type Grid}">
-                <Style.Triggers>
-                    <DataTrigger Binding="{Binding ShowThisView}" Value="True">
-                        <Setter Property="Visibility" Value="Visible"/>
-                    </DataTrigger>
-                    <DataTrigger Binding="{Binding ShowThisView}" Value="False">
-                        <Setter Property="Visibility" Value="Collapsed"/>
-                    </DataTrigger>
-                </Style.Triggers>
-            </Style>
-        </Grid.Style>
+    <Grid>
+        <Grid>
+            <Grid.Style>
+                <Style TargetType="{x:Type Grid}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding ShowThisView}" Value="True">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding ShowThisView}" Value="False">
+                            <Setter  Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <cefSharp:ChromiumWebBrowser Grid.Row="0" x:Name="_webBrowser"
+                                         Visibility="{Binding IsBodyAvailable, Converter={StaticResource Bool2VisibilityConverter}}"/>
+
+            <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="{Binding IsBodyAvailable, Converter={StaticResource InverseBool2VisibilityConverter}}">
+                <components:DoubleCircularProgressBar Width="30" Height="30" StrokeColor="Blue"/>
+                <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Text="Downloading..."/>
+            </StackPanel>
+        </Grid>
+        <Grid>
+            <StackPanel Orientation="Vertical" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="{Binding HasWebviewRenderingError, Converter={StaticResource Bool2VisibilityConverter}}">
+                <Image Source="/Utils/WPF/Resources/errorpng.png" Height="45" Width="45" VerticalAlignment="Center"
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       RenderOptions.EdgeMode="Aliased"/>
+                <TextBlock VerticalAlignment="Center" Margin="20,0,0,0" Text="Webview could not render Html, see debug logs..."/>
+            </StackPanel>
+        </Grid>
     </Grid>
 </UserControl>

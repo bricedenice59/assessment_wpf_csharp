@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Web.UI.WebControls;
 using System.Windows;
 using System.Windows.Controls;
 using CefSharp;
 using CommonServiceLocator;
 using DeveloperTest.MessageBus;
-using DeveloperTest.Utils.WPF;
+using DeveloperTest.ViewModels;
 using GalaSoft.MvvmLight.Messaging;
 using Ninject.Extensions.Logging;
 
@@ -16,15 +15,11 @@ namespace DeveloperTest.Views
     /// </summary>
     public partial class EmailsBodyDataView : UserControl
     {
-        private object _dataContext;
-        private ILogger _logger;
+        private readonly ILogger _logger;
         public EmailsBodyDataView()
         {
             InitializeComponent();
             Loaded += EmailsBodyDataView_Loaded;
-
-            _webBrowser.IsBrowserInitializedChanged += _webBrowser_IsBrowserInitializedChanged;
-
             var loggerFactory = ServiceLocator.Current.GetInstance<ILoggerFactory>();
             _logger = loggerFactory.GetCurrentClassLogger();
         }
@@ -39,14 +34,12 @@ namespace DeveloperTest.Views
                 }
                 catch (Exception ex)
                 {
+                    Dispatcher.Invoke(
+                        () => ((EmailsBodyDataViewModel) this.DataContext).HasWebviewRenderingError = true);
+
                     _logger?.ErrorException("Exception caught in webbrowser", ex);
                 }
             });
-        }
-
-        private void _webBrowser_IsBrowserInitializedChanged(object sender, DependencyPropertyChangedEventArgs e)
-        {
-           //just here for testing
         }
     }
 }

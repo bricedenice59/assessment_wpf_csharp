@@ -10,7 +10,7 @@ namespace DeveloperTest.ViewModels
 
         private bool _isBodyAvailable;
         private bool _showThisView;
-
+        private bool _hasWebviewRenderingError;
         #endregion
 
         #region Properties
@@ -33,6 +33,17 @@ namespace DeveloperTest.ViewModels
             }
         }
 
+        public bool HasWebviewRenderingError
+        {
+            get => _hasWebviewRenderingError;
+            set
+            {
+                Set(() => HasWebviewRenderingError, ref _hasWebviewRenderingError, value);
+                if(value)
+                    ShowThisView = false;
+            }
+        }
+
         #endregion
 
         #region Ctor
@@ -41,17 +52,19 @@ namespace DeveloperTest.ViewModels
         {
             IsBodyAvailable = false;
             ShowThisView = false;
+            HasWebviewRenderingError = false;
 
             ApplicationMessenger.Register<EmailBodyDownloadedMessage>(this, m =>
             {
+                HasWebviewRenderingError = false;
                 IsBodyAvailable = !m.IsBusy;
+                if (!_showThisView)
+                    ShowThisView = true;
+
                 if (m.EmailObj.IsBodyDownloaded)
                 {
                     ApplicationMessenger.Send(new LoadHtmlMessage(m.EmailObj.Body));
                 }
-
-                if(!_showThisView)
-                    ShowThisView = true;
             });
         }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using DeveloperTest.Utils.Events;
 
 namespace DeveloperTest.ValueObjects
 {
@@ -17,6 +18,7 @@ namespace DeveloperTest.ValueObjects
         public string From { get; set; }
         public string Subject { get; set; }
         public string Date { get; set; }
+
         public string Body { get; set; }
 
         public bool IsBodyBeingDownloaded
@@ -28,5 +30,17 @@ namespace DeveloperTest.ValueObjects
         public bool IsBodyDownloaded { get; set; }
 
         #endregion
+
+        #region Events
+        public event EventHandler<DownloadBodyFinishedEventArgs> OnEmailBodyDownloaded;
+        #endregion
+
+        public void SetBodyIsNowDownloaded()
+        {
+            IsBodyBeingDownloaded = false;
+            IsBodyDownloaded = true;
+
+            OnEmailBodyDownloaded?.Invoke(this, new DownloadBodyFinishedEventArgs(this));
+        }
     }
 }
