@@ -23,12 +23,6 @@ namespace DeveloperTest.Views
         public ServerConnectionPropertiesView()
         {
             InitializeComponent();
-            Loaded += ServerConnectionPropertiesView_Loaded;
-        }
-
-        private void ServerConnectionPropertiesView_Loaded(object sender, RoutedEventArgs e)
-        {
-            ((dynamic) DataContext).Password = "YjpkhPe5HxP5hGD";
         }
 
         private void OnPasswordChanged(object sender, RoutedEventArgs e)

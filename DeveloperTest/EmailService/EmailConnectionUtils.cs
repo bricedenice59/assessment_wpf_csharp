@@ -14,10 +14,10 @@ namespace DeveloperTest.EmailService
         private readonly IEmailConnectionDescriptorInstance _sharedConnectionDescriptor;
 
         public EmailConnectionUtils(IEmailConnectionDescriptorInstance sharedConnectionDescriptor,
-            ILoggerFactory loggerFactory)
+            ILogger logger)
         {
             _sharedConnectionDescriptor = sharedConnectionDescriptor;
-            _logger = loggerFactory.GetCurrentClassLogger();
+            _logger = logger;
         }
 
         #region Create Connections
