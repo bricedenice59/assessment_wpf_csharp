@@ -116,15 +116,13 @@ namespace DeveloperTest.ViewModels
                 {
                     await newConnection.ConnectAsync();
                     await newConnection.AuthenticateAsync();
+                    await _connectionUtils.SelectInboxAsync(newConnection);
                 }
                 catch (Exception e)
                 {
                     connectAndAuthenticateSuccess = false;
                     Logger.ErrorException("Something went wrong when trying to create a new connection for item download on demand.", e);
                 }
-
-                //select Inbox
-                await _connectionUtils.SelectInboxAsync(newConnection);
 
                 //download body
                 if (connectAndAuthenticateSuccess)

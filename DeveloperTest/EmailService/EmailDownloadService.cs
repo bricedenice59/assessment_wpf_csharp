@@ -121,7 +121,7 @@ namespace DeveloperTest.EmailService
 
             //case IMAP
             else if (maxParallelConnections == 5)
-                maxParallelConnectionsForHeaders = 4;
+                maxParallelConnectionsForHeaders = 3;
 
             var inputQueueHeaderDownload = new BlockingCollection<string>();
             var inputQueueBodyDownload = new BlockingCollection<EmailObject>();
