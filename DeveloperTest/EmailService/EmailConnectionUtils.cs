@@ -33,9 +33,9 @@ namespace DeveloperTest.EmailService
             if (cd == null)
                 throw new ArgumentException("ConnectionDescriptor is null!");
 
-            for (int i = 0; i < cd.GetMaxConnectionsForProtocol(); i++)
+            for (int i = 1; i <= cd.GetMaxConnectionsForProtocol(); i++)
             {
-                var cnx = CreateOneConnection();
+                var cnx = CreateOneConnection(i);
                 cnxs.Add(cnx);
             }
 
@@ -46,14 +46,14 @@ namespace DeveloperTest.EmailService
         /// Create one connection
         /// </summary>
         /// <returns></returns>
-        public AbstractConnection CreateOneConnection()
+        public AbstractConnection CreateOneConnection(int? idConnection)
         {
             var cd = _sharedConnectionDescriptor.GetConnectionData();
             if (cd == null)
                 throw new ArgumentException("ConnectionDescriptor is null!");
 
             //create one connection
-            return CreateNewConnection(cd);
+            return CreateNewConnection(cd, idConnection);
         }
 
         /// <summary>
@@ -61,16 +61,19 @@ namespace DeveloperTest.EmailService
         /// </summary>
         /// <param name="cd"></param>
         /// <returns></returns>
-        private AbstractConnection CreateNewConnection(ConnectionDescriptor cd)
+        private AbstractConnection CreateNewConnection(ConnectionDescriptor cd, int? idConnection)
         {
-            int idConnection = 1;
-            if (_sharedConnectionDescriptor.ConnectionsList?.Count > 0)
-                idConnection = _sharedConnectionDescriptor.ConnectionsList.Count + 1;
+            if (!idConnection.HasValue)
+            {
+                if (_sharedConnectionDescriptor.ConnectionsList?.Count > 0)
+                    idConnection = _sharedConnectionDescriptor.ConnectionsList.Count + 1;
+                else idConnection = -1;
+            }
 
             if (cd.MailProtocol == Protocols.IMAP)
-                return new ImapConnection(idConnection, cd);
+                return new ImapConnection(idConnection.Value, cd);
             if (cd.MailProtocol == Protocols.POP3)
-                return new Pop3Connection(idConnection, cd);
+                return new Pop3Connection(idConnection.Value, cd);
 
             return null;
         }
@@ -161,14 +164,17 @@ namespace DeveloperTest.EmailService
 
         public List<AbstractConnection> GetAll()
         {
-            return _sharedConnectionDescriptor.ConnectionsList;
+            lock (_lock)
+            {
+                return _sharedConnectionDescriptor.ConnectionsList;
+            }
         }
 
         public AbstractConnection GetOneAvailable()
         {
             lock (_lock)
             {
-                var cnx= _sharedConnectionDescriptor.ConnectionsList.FirstOrDefault(x => !x.IsBusy);
+                var cnx= GetAll().FirstOrDefault(x => !x.IsBusy);
                 if(cnx != null)
                     cnx.IsBusy = true;
                 return cnx;

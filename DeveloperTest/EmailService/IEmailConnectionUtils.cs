@@ -7,7 +7,7 @@ namespace DeveloperTest.EmailService
     public interface IEmailConnectionUtils
     {
         List<AbstractConnection> CreateConnections();
-        AbstractConnection CreateOneConnection();
+        AbstractConnection CreateOneConnection(int? idConnection);
         Task ConnectAndAuthenticateAsync(List<AbstractConnection> cnxs);
         Task DisconnectAsync(List<AbstractConnection> cnxs);
         Task SelectInboxAsync(AbstractConnection connection);

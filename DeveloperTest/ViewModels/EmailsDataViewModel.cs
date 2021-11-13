@@ -158,7 +158,7 @@ namespace DeveloperTest.ViewModels
             return Task.Run(async () =>
             {
                 //allocate new connection
-                var newConnection = _connectionUtils.CreateOneConnection();
+                var newConnection = _connectionUtils.CreateOneConnection(null);
 
                 //then connect and authenticate
                 bool connectAndAuthenticateSuccess = true;
