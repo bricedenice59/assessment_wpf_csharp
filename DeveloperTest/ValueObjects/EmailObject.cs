@@ -21,12 +21,6 @@ namespace DeveloperTest.ValueObjects
 
         public string Body { get; set; }
 
-        public bool IsBodyBeingDownloaded
-        {
-            get => Interlocked.Read(ref _isBodyBeingDownloaded) == 1;
-            set => Interlocked.Exchange(ref _isBodyBeingDownloaded, Convert.ToInt64(value));
-        }
-
         public bool IsBodyDownloaded { get; set; }
 
         #endregion
@@ -37,7 +31,6 @@ namespace DeveloperTest.ValueObjects
 
         public void SetBodyIsNowDownloaded()
         {
-            IsBodyBeingDownloaded = false;
             IsBodyDownloaded = true;
 
             OnEmailBodyDownloaded?.Invoke(this, new DownloadBodyFinishedEventArgs(this));

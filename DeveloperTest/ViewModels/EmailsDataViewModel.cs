@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Threading.Tasks;
 using DeveloperTest.EmailService;
 using DeveloperTest.MessageBus;
 using DeveloperTest.Utils.Events;
+using DeveloperTest.Utils.Extensions;
 using DeveloperTest.Utils.WPF;
 using DeveloperTest.ValueObjects;
+using DeveloperTest.ViewModels.Popups;
+using MvvmDialogs;
 using Ninject.Extensions.Logging;
 
 namespace DeveloperTest.ViewModels
@@ -16,6 +20,7 @@ namespace DeveloperTest.ViewModels
 
         private readonly IEmailConnectionUtils _connectionUtils;
         private readonly IEmailDownloadService _emailDownloadService;
+        private readonly IDialogService _dialogService;
         private EmailObject _selectedItem;
         private string _currentStatus;
         private bool _showAnimationStatus;
@@ -58,18 +63,6 @@ namespace DeveloperTest.ViewModels
 
                 Set(() => SelectedItem, ref _selectedItem, value);
 
-                if (value.IsBodyBeingDownloaded)
-                {
-                    Logger.Info($"Email body with id:{value.Uid} is being downloaded, body will be soon available...");
-
-                    //notify UI we have a busy download
-                    MessengerInstance.Send(new EmailBodyDownloadedMessage(value, true));
-
-                    //subscribe event to be later notified once the message is downloaded and then notify UI
-                    value.OnEmailBodyDownloaded += OnEmailBodyDownloaded;
-                    return;
-                }
-
                 //if body not downloaded yet, then request to download it.
                 if (!value.IsBodyDownloaded)
                 {
@@ -103,11 +96,15 @@ namespace DeveloperTest.ViewModels
 
         #region Ctor
 
-        public EmailsDataViewModel(ILogger logger, IEmailConnectionUtils connectionUtils,
+        public EmailsDataViewModel(ILogger logger,
+            IDialogService dialogService,
+            IEmailConnectionUtils connectionUtils,
             IEmailDownloadService emailDownloadService) : base(logger)
         {
             _connectionUtils = connectionUtils;
             _emailDownloadService = emailDownloadService;
+            _dialogService = dialogService;
+
             EmailsList = new ObservableCollection<EmailObject>();
             CurrentStatus = null;
             ShowStatusAnimation = false;
@@ -127,7 +124,7 @@ namespace DeveloperTest.ViewModels
 
         #region Events implementation
 
-        private void CallbackOnScanEmailsStatusChanged(object o, ScanEmailsStatusChangedEventArgs e)
+        private async void CallbackOnScanEmailsStatusChanged(object o, ScanEmailsStatusChangedEventArgs e)
         {
             switch (e.Status)
             {
@@ -140,7 +137,19 @@ namespace DeveloperTest.ViewModels
                     ShowStatusAnimation = false;
                     _emailDownloadService.NewEmailDiscovered -= _newEmailDiscoveredEventHandler;
                     _emailDownloadService.ScanEmailsStatusChanged -= _scanEmailsStatusChangedEventHandler;
-                    break;
+
+                    if (_emailDownloadService.ProcessedBodies.Count != _emailDownloadService.ProcessedBodies.Distinct().Count())
+                    {
+                        // Duplicates exist and that's an issue as this means some bodies have been downloaded more than once
+                        var errorPopupViewModel = new ErrorPopupViewModel(Logger)
+                        {
+                            Message = $"Some bodies have been downloaded more than once! \r\n Found {_emailDownloadService.ProcessedBodies.Distinct().Count()} distinct bodies downloaded but {_emailDownloadService.ProcessedBodies.Count} processed!!"
+                        };
+
+                        await _dialogService.ShowDialogAsync(this, errorPopupViewModel);
+                    }
+
+            return;
             }
         }
 

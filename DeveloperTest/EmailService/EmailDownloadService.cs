@@ -34,10 +34,14 @@ namespace DeveloperTest.EmailService
         private int _nbProcessedHeaders;
         private int _nbProcessedBodies;
 
+        //contains the list of body uids that have been already downloaded, this property is used to avoid processing body download more than once
+        public ConcurrentBag<string> ProcessedBodies { get; set; }
+
         public EmailDownloadService(ILogger logger, IEmailConnectionUtils connectionUtils)
         {
             _logger = logger;
             _connectionUtils = connectionUtils;
+            ProcessedBodies = new ConcurrentBag<string>();
         }
 
         /// <summary>
@@ -182,11 +186,6 @@ namespace DeveloperTest.EmailService
                 await inputQueueBodyDownload.GetConsumingEnumerable().ParallelForEachAsync(
                     async email =>
                     {
-                        //don't download email body if there is already a task that does the job
-                        //this happens if a request on downloading on demand has been raised and at the same time the automatic download is still running
-                        if (email.IsBodyBeingDownloaded)
-                            return;
-
                         AbstractConnection availableCnx;
                         while (true)
                         {
@@ -274,7 +273,16 @@ namespace DeveloperTest.EmailService
                 (connection.GetType() != typeof(ImapConnection) && connection.GetType() != typeof(Pop3Connection)))
                 return;
 
-            emailObj.IsBodyBeingDownloaded = true;
+            //don't download email body if there is already a task that does the job
+            //this happens if a request on downloading on demand has been raised and at the same time the automatic download is still running
+            if (ProcessedBodies.Any(x => x == emailObj.Uid))
+            {
+                emailObj.SetBodyIsNowDownloaded();
+                return;
+            }
+
+            ProcessedBodies.Add(emailObj.Uid);
+
             if (connection is ImapConnection cnx)
             {
                 var imapObj = cnx.ImapConnectionObj;
