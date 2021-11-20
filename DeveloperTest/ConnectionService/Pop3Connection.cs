@@ -53,9 +53,12 @@ namespace DeveloperTest.ConnectionService
 
         public override async Task DisconnectAsync()
         {
+            if (_pop3ConnectionObj == null)
+                return;
+
             Logger.Info($"Connection #{ConnectionId} Try disconnecting from Pop3 mail server");
             await _pop3ConnectionObj.CloseAsync(false);
-            _pop3ConnectionObj?.Dispose();
+            _pop3ConnectionObj.Dispose();
         }
     }
 }

@@ -19,7 +19,6 @@ namespace DeveloperTest.EmailService
 {
     public enum ScanProgress
     {
-        Canceled,
         InProgress,
         Completed
     }

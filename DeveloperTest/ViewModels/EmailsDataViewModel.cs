@@ -1,7 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Windows.Documents;
+using System.Windows.Threading;
 using DeveloperTest.EmailService;
 using DeveloperTest.MessageBus;
 using DeveloperTest.Utils.Events;
@@ -74,7 +78,7 @@ namespace DeveloperTest.ViewModels
                     value.OnEmailBodyDownloaded += OnEmailBodyDownloaded;
 
                     //let's force downloading it
-                    DownloadOnDemand(value);
+                    MessengerInstance.Send(new RequestDownloadOnDemandMessage(value));
                 }
                 else
                 {
@@ -112,11 +116,16 @@ namespace DeveloperTest.ViewModels
             _newEmailDiscoveredEventHandler = EventHandlerHelper.SafeEventHandler<NewEmailDiscoveredEventArgs>(CallbackOnNewEmailDiscovered);
             _scanEmailsStatusChangedEventHandler = EventHandlerHelper.SafeEventHandler<ScanEmailsStatusChangedEventArgs>(CallbackOnScanEmailsStatusChanged);
 
+            _emailDownloadService.NewEmailDiscovered += _newEmailDiscoveredEventHandler;
+            _emailDownloadService.ScanEmailsStatusChanged += _scanEmailsStatusChangedEventHandler;
+
             ApplicationMessenger.Register<StartScanEmailMessage>(this, async m =>
             {
-                _emailDownloadService.NewEmailDiscovered += _newEmailDiscoveredEventHandler;
-                _emailDownloadService.ScanEmailsStatusChanged += _scanEmailsStatusChangedEventHandler;
                 await _emailDownloadService.DownloadEmails();
+            });
+            ApplicationMessenger.Register<RequestDownloadOnDemandMessage>(this, async m =>
+            {
+                await DownloadOnDemand(m.EmailObj);
             });
         }
 
@@ -149,13 +158,16 @@ namespace DeveloperTest.ViewModels
                         await _dialogService.ShowDialogAsync(this, errorPopupViewModel);
                     }
 
-            return;
+                    await _connectionUtils.DisconnectAsync(_connectionUtils.GetAll());
+
+                    return;
             }
         }
 
         private void CallbackOnNewEmailDiscovered(object o, NewEmailDiscoveredEventArgs e)
         {
-            EmailsList.Add(e?.Email);
+            if(e?.Email != null)
+                EmailsList.Add(e.Email);
         }
 
         #endregion

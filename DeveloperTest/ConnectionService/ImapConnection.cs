@@ -62,9 +62,12 @@ namespace DeveloperTest.ConnectionService
 
         public override async Task DisconnectAsync()
         {
+            if (_imapConnectionObj == null)
+                return;
+
             Logger.Info($"Connection #{ConnectionId} Try disconnecting from Imap mail server");
             await _imapConnectionObj.CloseAsync(false);
-            _imapConnectionObj?.Dispose();
+            _imapConnectionObj.Dispose();
         }
     }
 }
