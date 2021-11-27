@@ -61,7 +61,12 @@ namespace DeveloperTest.EmailService
             foreach (var connection in connections)
             {
                 _logger.Info($"Select Inbox for Connection id {connection.ConnectionId}...");
-                await _connectionUtils.SelectInboxAsync(connection);
+                if(await _connectionUtils.SelectInboxAsync(connection))
+                {
+                    // at that stage we have a valid connection ready for downloading emails
+                    //add it in the connection pool
+                    _connectionUtils.Enqueue(connection);
+                }
             }
 
             _logger.Info($"Get emails uids");
@@ -141,39 +146,32 @@ namespace DeveloperTest.EmailService
 
             inputQueueHeaderDownload.CompleteAdding();
 
-            Task t1 = Task.Run(async() =>
+            Task t1 = Task.Run(async () =>
             {
                 await inputQueueHeaderDownload.GetConsumingEnumerable().ParallelForEachAsync(
                     async uid =>
                     {
-                        AbstractConnection availableCnx;
+                        AbstractConnection availableCnx = null;
                         while (true)
                         {
                             availableCnx = _connectionUtils.GetOneAvailable();
                             if (availableCnx == null)
                             {
-#if DEBUG
-                                _logger.Debug("No connection for downloading header"+ uid);
-                                await Task.Delay(20);
-#endif
                                 continue;
                             }
 
-#if DEBUG
-                            _logger.Debug("Connection available for downloading header"+ uid);
-#endif
                             break;
                         }
                         var email = await DownloadHeader(uid, availableCnx);
+                        _connectionUtils.Enqueue(availableCnx);
 
-                        _connectionUtils.FreeBusy(availableCnx);
                         Interlocked.Increment(ref _nbProcessedHeaders);
                         //downloading headers is done
                         //add the current mail to the queue of the next processing tasks
                         inputQueueBodyDownload.Add(email);
 
                         //send downloaded header to UI
-                        if(email != null)
+                        if (email != null)
                             NewEmailDiscovered?.Invoke(this, new NewEmailDiscoveredEventArgs(email));
                     },
                     maxDegreeOfParallelism: maxParallelConnectionsForHeaders);
@@ -185,32 +183,26 @@ namespace DeveloperTest.EmailService
                 await inputQueueBodyDownload.GetConsumingEnumerable().ParallelForEachAsync(
                     async email =>
                     {
-                        AbstractConnection availableCnx;
+                        AbstractConnection availableCnx = null;
                         while (true)
                         {
                             availableCnx = _connectionUtils.GetOneAvailable();
                             if (availableCnx == null)
                             {
-#if DEBUG
-                                _logger.Debug("No connection for downloading body" + email.Uid);
-                                await Task.Delay(20);
-#endif
                                 continue;
                             }
-#if DEBUG
-                            _logger.Debug("Connection available for downloading header" + email.Uid);
-#endif
 
                             break;
                         }
 
                         await DownloadBody(email, availableCnx);
+                        _connectionUtils.Enqueue(availableCnx);
 
-                        _connectionUtils.FreeBusy(availableCnx);
                         Interlocked.Increment(ref _nbProcessedBodies);
                     },
                     maxDegreeOfParallelism: maxParallelConnections);
             });
+
 
             //DO NOT WAIT FOR THIS TASK TO COMPLETE AS THIS WILL BLOCK BODIES TO BE DOWNLOADED CONCURRENTLY
             Task.WhenAll(t1);

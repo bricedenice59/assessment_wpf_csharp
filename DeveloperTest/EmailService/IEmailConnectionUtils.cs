@@ -10,9 +10,9 @@ namespace DeveloperTest.EmailService
         AbstractConnection CreateOneConnection(int? idConnection);
         Task ConnectAndAuthenticateAsync(List<AbstractConnection> cnxs);
         Task DisconnectAsync(List<AbstractConnection> cnxs);
-        Task SelectInboxAsync(AbstractConnection connection);
+        Task<bool> SelectInboxAsync(AbstractConnection connection);
+        void Enqueue(AbstractConnection cnx);
         List<AbstractConnection> GetAll();
         AbstractConnection GetOneAvailable();
-        void FreeBusy(AbstractConnection ac);
     }
 }

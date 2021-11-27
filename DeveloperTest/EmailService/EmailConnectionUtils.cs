@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,12 +13,14 @@ namespace DeveloperTest.EmailService
         private static object _lock = new object();
         private readonly ILogger _logger;
         private readonly IEmailConnectionDescriptorInstance _sharedConnectionDescriptor;
+        private ConcurrentQueue<AbstractConnection> _connectionsPool;
 
         public EmailConnectionUtils(IEmailConnectionDescriptorInstance sharedConnectionDescriptor,
             ILogger logger)
         {
             _sharedConnectionDescriptor = sharedConnectionDescriptor;
             _logger = logger;
+            _connectionsPool = new ConcurrentQueue<AbstractConnection>();
         }
 
         #region Create Connections
@@ -134,7 +137,7 @@ namespace DeveloperTest.EmailService
 
         #region Select Inbox
 
-        public async Task SelectInboxAsync(AbstractConnection connection)
+        public async Task<bool> SelectInboxAsync(AbstractConnection connection)
         {
             if (connection == null)
                 throw new ArgumentNullException("connection");
@@ -144,10 +147,11 @@ namespace DeveloperTest.EmailService
                 try
                 {
                     await cnxImap.ImapConnectionObj.SelectInboxAsync();
+                    return true;
                 }
                 catch (Exception ex)
                 {
-                    _logger.ErrorException($"Can not select inbox for connection id {cnxImap.ConnectionId}", ex);
+                    _logger.ErrorException($"Can not select inbox for connection id {cnxImap.ConnectionId}", ex);          
                 }
             }
             else if (connection is Pop3Connection)
@@ -158,34 +162,44 @@ namespace DeveloperTest.EmailService
             {
                 throw new NotImplementedException("Cannot download emails for this type of connection!");
             }
+            return false;
         }
 
         #endregion
 
+        public void Enqueue(AbstractConnection cnx)
+        {
+            SetIsBusy(cnx, false);
+            _connectionsPool.Enqueue(cnx);
+        }
+
         public List<AbstractConnection> GetAll()
         {
-            lock (_lock)
-            {
-                return _sharedConnectionDescriptor.ConnectionsList;
-            }
+            return _sharedConnectionDescriptor.ConnectionsList;
         }
 
         public AbstractConnection GetOneAvailable()
         {
-            lock (_lock)
+            if( _connectionsPool.Count == 0)
+                return null;
+
+            if(_connectionsPool.IsEmpty)
+                return null;
+
+            if (_connectionsPool.TryDequeue(out var cnx))
             {
-                var cnx= GetAll().FirstOrDefault(x => !x.IsBusy);
-                if(cnx != null)
-                    cnx.IsBusy = true;
+                SetIsBusy(cnx, true);
                 return cnx;
             }
+
+            return null;
         }
 
-        public void FreeBusy(AbstractConnection ac)
+        private void SetIsBusy(AbstractConnection ac, bool isBusy)
         {
             lock (_lock)
             {
-                ac.IsBusy = false;
+                ac.IsBusy = isBusy;
             }
         }
     }
