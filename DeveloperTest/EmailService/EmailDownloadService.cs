@@ -30,6 +30,7 @@ namespace DeveloperTest.EmailService
         private readonly ILogger _logger;
         private readonly IEmailConnectionUtils _connectionUtils;
 
+        private static object _lockEmailBodyProcess = new object();
         private int _nbProcessedHeaders;
         private int _nbProcessedBodies;
 
@@ -266,13 +267,13 @@ namespace DeveloperTest.EmailService
 
             //don't download email body if there is already a task that does the job
             //this happens if a request on downloading on demand has been raised and at the same time the automatic download is still running
-            if (ProcessedBodies.Any(x => x == emailObj.Uid))
+            if (HasEmailBodyBeenProcessed(emailObj))
             {
                 emailObj.SetBodyIsNowDownloaded();
                 return;
             }
 
-            ProcessedBodies.Add(emailObj.Uid);
+            AddProcessedBodyToBag(emailObj);
 
             if (connection is ImapConnection cnx)
             {
@@ -323,6 +324,22 @@ namespace DeveloperTest.EmailService
             }
 
             emailObj.SetBodyIsNowDownloaded();
+        }
+
+        private bool HasEmailBodyBeenProcessed(EmailObject emailObj)
+        {
+            lock(_lockEmailBodyProcess)
+            {
+                return ProcessedBodies.Any(x => x == emailObj.Uid);
+            }
+        }
+
+        private void AddProcessedBodyToBag(EmailObject emailObj)
+        {
+            lock (_lockEmailBodyProcess)
+            {
+                ProcessedBodies.Add(emailObj.Uid);
+            }
         }
     }
 }
