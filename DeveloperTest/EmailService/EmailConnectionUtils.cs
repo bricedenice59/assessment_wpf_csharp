@@ -10,7 +10,6 @@ namespace DeveloperTest.EmailService
 {
     public class EmailConnectionUtils : IEmailConnectionUtils
     {
-        private static object _lock = new object();
         private readonly ILogger _logger;
         private readonly IEmailConnectionDescriptorInstance _sharedConnectionDescriptor;
         private ConcurrentQueue<AbstractConnection> _connectionsPool;
@@ -180,10 +179,7 @@ namespace DeveloperTest.EmailService
 
         public AbstractConnection GetOneAvailable()
         {
-            if( _connectionsPool.Count == 0)
-                return null;
-
-            if(_connectionsPool.IsEmpty)
+            if (_connectionsPool.IsEmpty)
                 return null;
 
             if (_connectionsPool.TryDequeue(out var cnx))
@@ -197,10 +193,7 @@ namespace DeveloperTest.EmailService
 
         private void SetIsBusy(AbstractConnection ac, bool isBusy)
         {
-            lock (_lock)
-            {
-                ac.IsBusy = isBusy;
-            }
+            ac.IsBusy = isBusy;
         }
     }
 }

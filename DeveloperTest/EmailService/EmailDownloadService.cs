@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using CefSharp.DevTools.Runtime;
 using CommonServiceLocator;
 using Dasync.Collections;
 using DeveloperTest.ConnectionService;
@@ -33,6 +34,7 @@ namespace DeveloperTest.EmailService
         private static object _lockEmailBodyProcess = new object();
         private int _nbProcessedHeaders;
         private int _nbProcessedBodies;
+        private SemaphoreSlim _semaphoreSlim;
 
         //contains the list of body uids that have been already downloaded, this property is used to avoid processing body download more than once
         public ConcurrentBag<string> ProcessedBodies { get; set; }
@@ -105,7 +107,8 @@ namespace DeveloperTest.EmailService
             _logger.Info($"Found {uids.Count} emails to download");
 
             ScanEmailsStatusChanged?.Invoke(this, new ScanEmailsStatusChangedEventArgs(ScanProgress.InProgress));
-            await ProcessDownloadHeadersAndBodies(uids, connections.Count);
+            _semaphoreSlim = new SemaphoreSlim(connections.Count);
+            await ProcessDownloadHeadersAndBodies1(uids);
             ScanEmailsStatusChanged?.Invoke(this, new ScanEmailsStatusChangedEventArgs(ScanProgress.Completed));
 
             _logger.Info($"{_nbProcessedHeaders} email headers have been successfully downloaded");
@@ -116,99 +119,40 @@ namespace DeveloperTest.EmailService
         /// This is a method that downloads emails headers and bodies concurrently and by using the maximum connections available
         /// </summary>
         /// <param name="uids">list of emails ids to proceed with</param>
-        /// <param name="maxParallelConnections">maximum number of connections to use for the download process</param>
         /// <returns></returns>
-        private async Task ProcessDownloadHeadersAndBodies(List<string> uids, int maxParallelConnections)
+        private async Task ProcessDownloadHeadersAndBodies1(List<string> uids)
         {
-            //From testing experience, downloading email headers is always faster than downloading their bodies, hence the volume of data...
-            //so I'll split concurrent connections by using 30% available connections for headers and 70% for bodies (that is true at the beginning of the process)
-            //Once the headers are downloaded, all connections (100%) will be used for the unfinished task (bodies download)
+            var tasksDownload = uids
+                .Select(x => Task.Run(async () =>
+                {
+                    await _semaphoreSlim.WaitAsync();
 
-            //the trick is to use the maxDegreeOfParallelism of the foreach parallel object, like for CPUs, it will create a number of parallel tasks to be run in parallel
-            //At the beginning of the process, for imap connections, maximum 4 parallel tasks will process the download of headers and 1 for the bodies
-            //Once headers are downloaded, then the second method that download bodies can use the maximum 5 connections for faster download
-            //For every task, one available connection "not busy yet" will be assigned to it, once task has completed, the "busy"connection is released and can be reused for the next task
-
-            int maxParallelConnectionsForHeaders = 1;
-            //case POP3
-            if (maxParallelConnections == 3)
-                maxParallelConnectionsForHeaders = 2;
-
-            //case IMAP
-            else if (maxParallelConnections == 5)
-                maxParallelConnectionsForHeaders = 4;
-
-            var inputQueueHeaderDownload = new BlockingCollection<string>();
-            var inputQueueBodyDownload = new BlockingCollection<EmailObject>();
-
-            //feed the queue with all email ids we need to download headers for
-            foreach (var id in uids)
-                inputQueueHeaderDownload.Add(id);
-
-            inputQueueHeaderDownload.CompleteAdding();
-
-            Task t1 = Task.Run(async () =>
-            {
-                await inputQueueHeaderDownload.GetConsumingEnumerable().ParallelForEachAsync(
-                    async uid =>
+                    var availableCnx = _connectionUtils.GetOneAvailable();
+                    if (availableCnx == null)
                     {
-                        AbstractConnection availableCnx = null;
-                        while (true)
-                        {
-                            availableCnx = _connectionUtils.GetOneAvailable();
-                            if (availableCnx == null)
-                            {
-                                continue;
-                            }
+                        //that should never happen since the semaphore initial count = number of connections in pool
+                        _logger.Info("No connection available");
+                        return;
+                    }
 
-                            break;
-                        }
-                        var email = await DownloadHeader(uid, availableCnx);
-                        _connectionUtils.Enqueue(availableCnx);
+                    var email = await DownloadHeader(x, availableCnx);
+                    Interlocked.Increment(ref _nbProcessedHeaders);
 
-                        Interlocked.Increment(ref _nbProcessedHeaders);
-                        //downloading headers is done
-                        //add the current mail to the queue of the next processing tasks
-                        inputQueueBodyDownload.Add(email);
+                    //send downloaded header to UI
+                    if (email != null)
+                        NewEmailDiscovered?.Invoke(this, new NewEmailDiscoveredEventArgs(email));
 
-                        //send downloaded header to UI
-                        if (email != null)
-                            NewEmailDiscovered?.Invoke(this, new NewEmailDiscoveredEventArgs(email));
-                    },
-                    maxDegreeOfParallelism: maxParallelConnectionsForHeaders);
-                inputQueueBodyDownload.CompleteAdding();
-            });
+                    await DownloadBody(email, availableCnx);
+                    Interlocked.Increment(ref _nbProcessedBodies);
 
-            Task t2 = Task.Run(async () =>
-            {
-                await inputQueueBodyDownload.GetConsumingEnumerable().ParallelForEachAsync(
-                    async email =>
-                    {
-                        AbstractConnection availableCnx = null;
-                        while (true)
-                        {
-                            availableCnx = _connectionUtils.GetOneAvailable();
-                            if (availableCnx == null)
-                            {
-                                continue;
-                            }
+                    //free connection and re-enqueue it
+                    _connectionUtils.Enqueue(availableCnx);
 
-                            break;
-                        }
+                    _semaphoreSlim.Release();
+                }))
+                .ToArray();
 
-                        await DownloadBody(email, availableCnx);
-                        _connectionUtils.Enqueue(availableCnx);
-
-                        Interlocked.Increment(ref _nbProcessedBodies);
-                    },
-                    maxDegreeOfParallelism: maxParallelConnections);
-            });
-
-
-            //DO NOT WAIT FOR THIS TASK TO COMPLETE AS THIS WILL BLOCK BODIES TO BE DOWNLOADED CONCURRENTLY
-            Task.WhenAll(t1);
-
-            await Task.WhenAll(t2);
+            await Task.WhenAll(tasksDownload);
         }
 
         private async Task<EmailObject> DownloadHeader(string emailIdObj, AbstractConnection connection)

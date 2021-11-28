@@ -6,12 +6,6 @@ namespace DeveloperTest.ValueObjects
 {
     public class EmailObject
     {
-        #region Fields
-
-        private long _isBodyBeingDownloaded = 0;
-
-        #endregion
-
         #region Properties
 
         public string Uid { get; set; }
