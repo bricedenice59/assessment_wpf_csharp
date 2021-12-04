@@ -18,14 +18,14 @@
         public static string GetDefaultPortForProtocol(Protocols protocol, EncryptionTypes encryptionType)
         {
             if (protocol == Protocols.IMAP && (encryptionType == EncryptionTypes.SSLTLS || encryptionType == EncryptionTypes.STARTTLS))
-                return "993";
+                return Limilabs.Client.IMAP.Imap.DefaultSSLPort.ToString();
             if (protocol == Protocols.IMAP && encryptionType == EncryptionTypes.Unencrypted)
-                return "143";
+                return Limilabs.Client.IMAP.Imap.DefaultPort.ToString();
 
             if (protocol == Protocols.POP3 && (encryptionType == EncryptionTypes.SSLTLS || encryptionType == EncryptionTypes.STARTTLS))
-                return "995";
+                return Limilabs.Client.POP3.Pop3.DefaultSSLPort.ToString();
             if (protocol == Protocols.POP3 && encryptionType == EncryptionTypes.Unencrypted)
-                return "110";
+                return Limilabs.Client.POP3.Pop3.DefaultPort.ToString();
 
             return "-1";
 

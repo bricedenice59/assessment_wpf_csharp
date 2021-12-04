@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using CommonServiceLocator;
+using Limilabs.Client;
 using Ninject.Extensions.Logging;
 
 namespace DeveloperTest.ConnectionService
